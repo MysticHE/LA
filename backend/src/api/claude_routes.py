@@ -133,3 +133,39 @@ async def connect_claude(
         connected=True,
         masked_key=masked_key
     )
+
+
+@router.post("/disconnect", response_model=ClaudeAuthResponse)
+async def disconnect_claude(
+    x_session_id: Optional[str] = Header(None, alias="X-Session-ID")
+) -> ClaudeAuthResponse:
+    """Disconnect and remove a stored Claude API key.
+
+    Deletes the stored API key for the session.
+
+    Args:
+        x_session_id: Session ID from header for key lookup.
+
+    Returns:
+        ClaudeAuthResponse with disconnected status.
+
+    Raises:
+        HTTPException: 400 if no key is stored for the session.
+    """
+    session_id = x_session_id or "default"
+    storage = get_key_storage()
+
+    # Check if a key exists for this session
+    if not storage.exists(session_id):
+        raise HTTPException(
+            status_code=400,
+            detail="No Claude API key connected for this session"
+        )
+
+    # Delete the stored key
+    storage.delete(session_id)
+
+    return ClaudeAuthResponse(
+        connected=False,
+        masked_key=None
+    )

@@ -437,3 +437,133 @@ class TestStatusEndpoint:
         )
         assert response2.json()["connected"] is False
         assert response2.json()["masked_key"] is None
+
+
+class TestDisconnectEndpoint:
+    """Tests for POST /api/auth/claude/disconnect endpoint."""
+
+    def test_disconnect_when_connected_deletes_key_and_returns_success(self, client):
+        """Test that disconnect deletes the stored key and returns connected: false."""
+        # First, connect with a key
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-to-disconnect-1234"},
+                headers={"X-Session-ID": "disconnect-test-session"}
+            )
+
+        # Verify key was stored
+        storage = get_key_storage()
+        assert storage.exists("disconnect-test-session")
+
+        # Disconnect
+        response = client.post(
+            "/api/auth/claude/disconnect",
+            headers={"X-Session-ID": "disconnect-test-session"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["connected"] is False
+        assert data["masked_key"] is None
+
+        # Verify key was deleted
+        assert not storage.exists("disconnect-test-session")
+
+    def test_disconnect_when_not_connected_returns_400(self, client):
+        """Test that disconnect returns 400 when no key is stored."""
+        response = client.post(
+            "/api/auth/claude/disconnect",
+            headers={"X-Session-ID": "non-existent-session"}
+        )
+
+        assert response.status_code == 400
+        assert "No Claude API key connected" in response.json()["detail"]
+
+    def test_disconnect_uses_default_session_when_not_provided(self, client):
+        """Test that disconnect uses default session ID when not provided."""
+        # First, connect with default session
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-default-disconnect-5678"}
+            )
+
+        # Verify key was stored under default session
+        storage = get_key_storage()
+        assert storage.exists("default")
+
+        # Disconnect without session ID
+        response = client.post("/api/auth/claude/disconnect")
+
+        assert response.status_code == 200
+        assert response.json()["connected"] is False
+
+        # Verify key was deleted
+        assert not storage.exists("default")
+
+    def test_disconnect_subsequent_status_shows_disconnected(self, client):
+        """Test that status call shows disconnected after successful disconnect."""
+        # First, connect with a key
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-status-after-disconnect"},
+                headers={"X-Session-ID": "status-after-disconnect-session"}
+            )
+
+        # Verify connected
+        status_response1 = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "status-after-disconnect-session"}
+        )
+        assert status_response1.json()["connected"] is True
+
+        # Disconnect
+        disconnect_response = client.post(
+            "/api/auth/claude/disconnect",
+            headers={"X-Session-ID": "status-after-disconnect-session"}
+        )
+        assert disconnect_response.status_code == 200
+
+        # Verify status shows disconnected
+        status_response2 = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "status-after-disconnect-session"}
+        )
+        assert status_response2.json()["connected"] is False
+        assert status_response2.json()["masked_key"] is None
+
+    def test_disconnect_only_affects_specified_session(self, client):
+        """Test that disconnect only affects the specified session, not others."""
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            # Connect session 1
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-session-a-key"},
+                headers={"X-Session-ID": "session-a"}
+            )
+            # Connect session 2
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-session-b-key"},
+                headers={"X-Session-ID": "session-b"}
+            )
+
+        # Disconnect session 1
+        client.post(
+            "/api/auth/claude/disconnect",
+            headers={"X-Session-ID": "session-a"}
+        )
+
+        # Session 1 should be disconnected
+        storage = get_key_storage()
+        assert not storage.exists("session-a")
+
+        # Session 2 should still be connected
+        assert storage.exists("session-b")
+        assert storage.retrieve("session-b") == "sk-ant-api03-session-b-key"
