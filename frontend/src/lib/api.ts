@@ -1,5 +1,110 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 
+// Error type for API errors
+export class ApiError extends Error {
+  readonly code: string
+  readonly retryable: boolean
+  readonly retryAfter?: number
+
+  constructor(
+    message: string,
+    code: string,
+    retryable = false,
+    retryAfter?: number
+  ) {
+    super(message)
+    this.name = "ApiError"
+    this.code = code
+    this.retryable = retryable
+    this.retryAfter = retryAfter
+  }
+}
+
+// User-friendly error messages map
+const ERROR_MESSAGES: Record<string, string> = {
+  // Network errors
+  NETWORK_ERROR: "Unable to connect to the server. Please check your internet connection.",
+  TIMEOUT_ERROR: "The request took too long. Please try again.",
+  // Claude API errors
+  INVALID_API_KEY: "The API key is invalid. Please check your key and try again.",
+  RATE_LIMITED: "You've made too many requests. Please wait before trying again.",
+  PERMISSION_DENIED: "Your API key doesn't have permission for this operation.",
+  SERVICE_UNAVAILABLE: "Claude service is temporarily unavailable. Please try again later.",
+  // Generic errors
+  UNKNOWN_ERROR: "Something went wrong. Please try again.",
+}
+
+/**
+ * Maps technical error messages to user-friendly ones
+ */
+export function getUserFriendlyError(error: string, code = "UNKNOWN_ERROR"): string {
+  if (ERROR_MESSAGES[code]) {
+    return ERROR_MESSAGES[code]
+  }
+
+  // Map common error patterns to user-friendly messages
+  const errorLower = error.toLowerCase()
+  if (errorLower.includes("network") || errorLower.includes("fetch") || errorLower.includes("failed to fetch")) {
+    return ERROR_MESSAGES.NETWORK_ERROR
+  }
+  if (errorLower.includes("timeout") || errorLower.includes("aborted")) {
+    return ERROR_MESSAGES.TIMEOUT_ERROR
+  }
+  if (errorLower.includes("invalid") && errorLower.includes("key")) {
+    return ERROR_MESSAGES.INVALID_API_KEY
+  }
+  if (errorLower.includes("rate") || errorLower.includes("429") || errorLower.includes("too many")) {
+    return ERROR_MESSAGES.RATE_LIMITED
+  }
+  if (errorLower.includes("permission") || errorLower.includes("403") || errorLower.includes("forbidden")) {
+    return ERROR_MESSAGES.PERMISSION_DENIED
+  }
+  if (errorLower.includes("unavailable") || errorLower.includes("503") || errorLower.includes("service")) {
+    return ERROR_MESSAGES.SERVICE_UNAVAILABLE
+  }
+
+  // Return the original message if no mapping found (but sanitized)
+  return error || ERROR_MESSAGES.UNKNOWN_ERROR
+}
+
+/**
+ * Wraps fetch with timeout handling
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout = 30000
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        throw new ApiError(
+          ERROR_MESSAGES.TIMEOUT_ERROR,
+          "TIMEOUT_ERROR",
+          true
+        )
+      }
+      throw new ApiError(
+        getUserFriendlyError(error.message),
+        "NETWORK_ERROR",
+        true
+      )
+    }
+    throw new ApiError(ERROR_MESSAGES.UNKNOWN_ERROR, "UNKNOWN_ERROR", true)
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 export interface TechStackItem {
   name: string
   category: string
@@ -99,7 +204,7 @@ export const api = {
 
   // Claude Auth API
   async connectClaude(apiKey: string, sessionId = "default"): Promise<ClaudeAuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/claude/connect`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/connect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -107,11 +212,23 @@ export const api = {
       },
       body: JSON.stringify({ api_key: apiKey }),
     })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: false,
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
     return response.json()
   },
 
   async getClaudeStatus(sessionId = "default"): Promise<ClaudeStatusResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/claude/status`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/status`, {
       headers: {
         "X-Session-ID": sessionId,
       },
@@ -120,12 +237,24 @@ export const api = {
   },
 
   async disconnectClaude(sessionId = "default"): Promise<ClaudeAuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/claude/disconnect`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/disconnect`, {
       method: "POST",
       headers: {
         "X-Session-ID": sessionId,
       },
     })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: true, // Keep connected on error
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
     return response.json()
   },
 
@@ -135,36 +264,52 @@ export const api = {
     style: string,
     sessionId = "default"
   ): Promise<AIGenerateResponse> {
-    const response = await fetch(`${API_BASE_URL}/generate/ai-post`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Session-ID": sessionId,
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/generate/ai-post`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-ID": sessionId,
+        },
+        body: JSON.stringify({ analysis, style }),
       },
-      body: JSON.stringify({ analysis, style }),
-    })
+      60000 // 60 second timeout for AI generation
+    )
 
     // Handle rate limit with retry_after
     if (response.status === 429) {
       const retryAfter = response.headers.get("Retry-After")
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       return {
         success: false,
         content: null,
         style: style,
-        error: data.detail || "Rate limit exceeded. Please try again later.",
-        retry_after: retryAfter ? parseInt(retryAfter, 10) : undefined,
+        error: getUserFriendlyError(data.detail || "Rate limit exceeded", "RATE_LIMITED"),
+        retry_after: retryAfter ? parseInt(retryAfter, 10) : 60,
       }
     }
 
     // Handle unauthorized (not connected)
     if (response.status === 401) {
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       return {
         success: false,
         content: null,
         style: style,
         error: data.detail || "Not connected to Claude. Please connect your API key.",
+      }
+    }
+
+    // Handle other error responses
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        success: false,
+        content: null,
+        style: style,
+        error: getUserFriendlyError(errorMessage),
       }
     }
 

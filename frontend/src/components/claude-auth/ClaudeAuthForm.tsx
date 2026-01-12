@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAppStore } from "@/store/appStore"
-import { api } from "@/lib/api"
+import { api, ApiError, getUserFriendlyError } from "@/lib/api"
 
 const formSchema = z.object({
   apiKey: z
@@ -61,10 +61,15 @@ export function ClaudeAuthForm({ onSuccess }: ClaudeAuthFormProps) {
         setClaudeError(response.error || "Failed to connect. Please check your API key.")
       }
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Network error. Please check your connection and try again."
-      setClaudeError(errorMessage)
+      // Use ApiError message directly (already user-friendly from fetchWithTimeout)
+      // or map generic errors to friendly messages
+      if (error instanceof ApiError) {
+        setClaudeError(error.message)
+      } else if (error instanceof Error) {
+        setClaudeError(getUserFriendlyError(error.message))
+      } else {
+        setClaudeError("Something went wrong. Please try again.")
+      }
     } finally {
       setClaudeLoading(false)
     }
