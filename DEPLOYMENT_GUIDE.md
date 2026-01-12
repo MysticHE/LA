@@ -31,7 +31,7 @@
 | **Name** | `linkedin-content-api` |
 | **Region** | Singapore (or closest to you) |
 | **Branch** | `main` |
-| **Root Directory** | `linkedin-content-automation/backend` |
+| **Root Directory** | `backend` |
 | **Runtime** | `Python 3` |
 | **Build Command** | `pip install -r requirements.txt` |
 | **Start Command** | `uvicorn src.api.main:app --host 0.0.0.0 --port $PORT` |
@@ -57,7 +57,7 @@ services:
     name: linkedin-content-api
     runtime: python
     region: singapore
-    rootDir: linkedin-content-automation/backend
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -72,7 +72,7 @@ services:
     name: linkedin-content-frontend
     runtime: static
     region: singapore
-    rootDir: linkedin-content-automation/frontend
+    rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     headers:
@@ -99,7 +99,7 @@ services:
 |---------|-------|
 | **Name** | `linkedin-content-frontend` |
 | **Branch** | `main` |
-| **Root Directory** | `linkedin-content-automation/frontend` |
+| **Root Directory** | `frontend` |
 | **Build Command** | `npm install && npm run build` |
 | **Publish Directory** | `dist` |
 
