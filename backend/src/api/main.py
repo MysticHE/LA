@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -12,9 +13,24 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS origins - add your Render frontend URL here
+cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Add production frontend URL from environment
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    cors_origins.append(frontend_url)
+
+# Allow all origins in development (when ALLOW_ALL_ORIGINS is set)
+if os.getenv("ALLOW_ALL_ORIGINS", "").lower() == "true":
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
