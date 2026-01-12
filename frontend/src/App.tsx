@@ -2,8 +2,13 @@ import { Header } from "@/components/layout/Header"
 import { RepoInputForm } from "@/components/repo-input/RepoInputForm"
 import { AnalysisCard } from "@/components/analysis/AnalysisCard"
 import { PostCard } from "@/components/posts/PostCard"
+import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
+import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
+import { useAppStore } from "@/store/appStore"
 
 function App() {
+  const { analysis } = useAppStore()
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -17,9 +22,20 @@ function App() {
               Analyze your repositories and generate engaging content for your professional network
             </p>
           </div>
+
+          {/* Claude Connection - Always visible for easy access */}
+          <ClaudeConnectionStatus />
+
           <RepoInputForm />
           <AnalysisCard />
-          <PostCard />
+
+          {/* Show both post options when analysis is complete */}
+          {analysis && (
+            <>
+              <AIPostGenerator analysis={analysis} />
+              <PostCard />
+            </>
+          )}
         </div>
       </main>
       <footer className="border-t py-4">

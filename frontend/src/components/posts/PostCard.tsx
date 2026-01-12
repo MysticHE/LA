@@ -1,10 +1,11 @@
 import { useEffect } from "react"
-import { Copy, Check, RefreshCw, Loader2 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Copy, Check, RefreshCw, Loader2, Sparkles, FileText } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
 import { useAppStore } from "@/store/appStore"
 import { useGeneratePrompt } from "@/hooks/useAnalyzeRepo"
 import { useClipboard } from "@/hooks/useClipboard"
@@ -22,6 +23,7 @@ export function PostCard() {
     setSelectedStyle,
     generatedPrompts,
     isGenerating,
+    claudeAuth,
   } = useAppStore()
   const generatePrompt = useGeneratePrompt()
   const { copied, copy } = useClipboard()
@@ -59,10 +61,23 @@ export function PostCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <span className="text-2xl">3</span>
-          Generated LinkedIn Post Prompt
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Manual Prompt Generation
+            </CardTitle>
+            <CardDescription>
+              Generate a prompt to use with Claude CLI
+            </CardDescription>
+          </div>
+          {claudeAuth.isConnected && (
+            <Badge className="bg-green-500/10 text-green-600 border-green-500/20 gap-1">
+              <Sparkles className="h-3 w-3" />
+              AI Generation Available Above
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={selectedStyle} onValueChange={handleStyleChange}>
