@@ -64,6 +64,34 @@ async def validate_claude_api_key(api_key: str) -> tuple[bool, Optional[str]]:
         return False, "Failed to validate API key. Please try again."
 
 
+@router.get("/status", response_model=ClaudeAuthResponse)
+async def get_claude_status(
+    x_session_id: Optional[str] = Header(None, alias="X-Session-ID")
+) -> ClaudeAuthResponse:
+    """Get the Claude connection status for a session.
+
+    Args:
+        x_session_id: Session ID from header for key lookup.
+
+    Returns:
+        ClaudeAuthResponse with connection status and masked key if connected.
+    """
+    session_id = x_session_id or "default"
+    storage = get_key_storage()
+
+    if storage.exists(session_id):
+        masked_key = storage.get_masked_key(session_id)
+        return ClaudeAuthResponse(
+            connected=True,
+            masked_key=masked_key
+        )
+    else:
+        return ClaudeAuthResponse(
+            connected=False,
+            masked_key=None
+        )
+
+
 @router.post("/connect", response_model=ClaudeAuthResponse)
 async def connect_claude(
     request: ClaudeAuthRequest,

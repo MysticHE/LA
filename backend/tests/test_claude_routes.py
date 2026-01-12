@@ -326,3 +326,114 @@ class TestIntegration:
             storage = get_key_storage()
             stored_key = storage.retrieve("replace-test")
             assert stored_key == "sk-ant-api03-second-key"
+
+
+class TestStatusEndpoint:
+    """Tests for GET /api/auth/claude/status endpoint."""
+
+    def test_status_when_connected_returns_true_with_masked_key(self, client):
+        """Test that status returns connected: true with masked key when connected."""
+        # First, connect with a key
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-test-status-1234"},
+                headers={"X-Session-ID": "status-test-session"}
+            )
+
+        # Then check status
+        response = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "status-test-session"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["connected"] is True
+        assert data["masked_key"] is not None
+        assert data["masked_key"].endswith("1234")
+
+    def test_status_when_not_connected_returns_false(self, client):
+        """Test that status returns connected: false when not connected."""
+        response = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "non-existent-session"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["connected"] is False
+        assert data["masked_key"] is None
+
+    def test_status_uses_default_session_when_not_provided(self, client):
+        """Test that status uses default session ID when not provided."""
+        # First, connect with default session
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-default-key-5678"}
+            )
+
+        # Check status without session ID
+        response = client.get("/api/auth/claude/status")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["connected"] is True
+        assert data["masked_key"].endswith("5678")
+
+    def test_status_masked_key_shows_only_last_4_chars(self, client):
+        """Test that masked key shows only last 4 characters."""
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            # Use a long key to verify masking
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-this-is-a-very-long-api-key-abcd"},
+                headers={"X-Session-ID": "mask-test-session"}
+            )
+
+        response = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "mask-test-session"}
+        )
+
+        assert response.status_code == 200
+        masked_key = response.json()["masked_key"]
+        
+        # Should end with last 4 chars
+        assert masked_key.endswith("abcd")
+        # Should have asterisks before
+        assert "*" in masked_key
+        # The visible part should only be 4 chars
+        visible_chars = masked_key.replace("*", "")
+        assert visible_chars == "abcd"
+
+    def test_status_returns_different_results_for_different_sessions(self, client):
+        """Test that different sessions have independent status."""
+        with patch('src.api.claude_routes.validate_claude_api_key', new_callable=AsyncMock) as mock_validate:
+            mock_validate.return_value = (True, None)
+            # Connect session 1
+            client.post(
+                "/api/auth/claude/connect",
+                json={"api_key": "sk-ant-api03-session1-1111"},
+                headers={"X-Session-ID": "session-1"}
+            )
+
+        # Check session 1 - should be connected
+        response1 = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "session-1"}
+        )
+        assert response1.json()["connected"] is True
+        assert response1.json()["masked_key"].endswith("1111")
+
+        # Check session 2 - should not be connected
+        response2 = client.get(
+            "/api/auth/claude/status",
+            headers={"X-Session-ID": "session-2"}
+        )
+        assert response2.json()["connected"] is False
+        assert response2.json()["masked_key"] is None
