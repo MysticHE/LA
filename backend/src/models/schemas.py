@@ -1,0 +1,65 @@
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional
+from enum import Enum
+
+
+class PostStyle(str, Enum):
+    PROBLEM_SOLUTION = "problem-solution"
+    TIPS_LEARNINGS = "tips-learnings"
+    TECHNICAL_SHOWCASE = "technical-showcase"
+
+
+class AnalyzeRequest(BaseModel):
+    url: str = Field(..., description="GitHub repository URL")
+    token: Optional[str] = Field(None, description="GitHub token for private repos")
+
+
+class TechStackItem(BaseModel):
+    name: str
+    category: str  # language, framework, library, tool
+
+
+class Feature(BaseModel):
+    name: str
+    description: str
+
+
+class AnalysisResult(BaseModel):
+    repo_name: str
+    description: Optional[str]
+    stars: int
+    forks: int
+    language: Optional[str]
+    tech_stack: list[TechStackItem]
+    features: list[Feature]
+    readme_summary: Optional[str]
+    file_structure: list[str]
+
+
+class GenerateRequest(BaseModel):
+    analysis: AnalysisResult
+    style: PostStyle = PostStyle.PROBLEM_SOLUTION
+
+
+class GeneratedPrompt(BaseModel):
+    style: PostStyle
+    prompt: str
+    instructions: str
+
+
+class TemplateInfo(BaseModel):
+    id: PostStyle
+    name: str
+    description: str
+
+
+class AnalyzeResponse(BaseModel):
+    success: bool
+    data: Optional[AnalysisResult] = None
+    error: Optional[str] = None
+
+
+class GenerateResponse(BaseModel):
+    success: bool
+    data: Optional[GeneratedPrompt] = None
+    error: Optional[str] = None
