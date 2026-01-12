@@ -52,6 +52,20 @@ export interface ClaudeStatusResponse {
   masked_key: string | null
 }
 
+// AI Generation Types
+export interface AIGenerateRequest {
+  analysis: AnalysisResult
+  style: string
+}
+
+export interface AIGenerateResponse {
+  success: boolean
+  content: string | null
+  style: string | null
+  error?: string
+  retry_after?: number
+}
+
 export const api = {
   async analyzeRepo(url: string, token?: string): Promise<ApiResponse<AnalysisResult>> {
     const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -112,6 +126,48 @@ export const api = {
         "X-Session-ID": sessionId,
       },
     })
+    return response.json()
+  },
+
+  // AI Generation API
+  async generateAIPost(
+    analysis: AnalysisResult,
+    style: string,
+    sessionId = "default"
+  ): Promise<AIGenerateResponse> {
+    const response = await fetch(`${API_BASE_URL}/generate/ai-post`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-ID": sessionId,
+      },
+      body: JSON.stringify({ analysis, style }),
+    })
+
+    // Handle rate limit with retry_after
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After")
+      const data = await response.json()
+      return {
+        success: false,
+        content: null,
+        style: style,
+        error: data.detail || "Rate limit exceeded. Please try again later.",
+        retry_after: retryAfter ? parseInt(retryAfter, 10) : undefined,
+      }
+    }
+
+    // Handle unauthorized (not connected)
+    if (response.status === 401) {
+      const data = await response.json()
+      return {
+        success: false,
+        content: null,
+        style: style,
+        error: data.detail || "Not connected to Claude. Please connect your API key.",
+      }
+    }
+
     return response.json()
   },
 }
