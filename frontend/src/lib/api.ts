@@ -40,6 +40,18 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+// Claude Auth Types
+export interface ClaudeAuthResponse {
+  connected: boolean
+  masked_key: string | null
+  error?: string
+}
+
+export interface ClaudeStatusResponse {
+  connected: boolean
+  masked_key: string | null
+}
+
 export const api = {
   async analyzeRepo(url: string, token?: string): Promise<ApiResponse<AnalysisResult>> {
     const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -68,6 +80,38 @@ export const api = {
 
   async getTemplates(): Promise<TemplateInfo[]> {
     const response = await fetch(`${API_BASE_URL}/templates`)
+    return response.json()
+  },
+
+  // Claude Auth API
+  async connectClaude(apiKey: string, sessionId = "default"): Promise<ClaudeAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/claude/connect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-ID": sessionId,
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    })
+    return response.json()
+  },
+
+  async getClaudeStatus(sessionId = "default"): Promise<ClaudeStatusResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/claude/status`, {
+      headers: {
+        "X-Session-ID": sessionId,
+      },
+    })
+    return response.json()
+  },
+
+  async disconnectClaude(sessionId = "default"): Promise<ClaudeAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/claude/disconnect`, {
+      method: "POST",
+      headers: {
+        "X-Session-ID": sessionId,
+      },
+    })
     return response.json()
   },
 }
