@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.routes import router
+from src.api.claude_routes import router as claude_router
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(claude_router, prefix="/api")
 
 
 @app.get("/")
