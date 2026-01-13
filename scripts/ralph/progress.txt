@@ -1,5 +1,33 @@
 # Ralph Progress Log
 
+## Iteration 15 - 2026-01-13
+
+### US-008: Create OpenAI Connection Status Component
+
+**Status:** PASSED
+
+**Changes Made:**
+- Created `frontend/src/components/openai-auth/OpenAIConnectionStatus.tsx`
+- Shows green 'Connected' badge with masked API key when connected
+- Displays OpenAIAuthForm when not connected
+- Includes confirmation flow for disconnect with Yes/No buttons
+- Handles loading states and error display
+- Uses openaiAuth state and actions from Zustand store
+- Calls api.disconnectOpenAI() for backend communication
+
+**Verification:**
+- TypeScript compilation passes (`npx tsc --noEmit`)
+- Build passes (`npm run build`)
+- Component follows ClaudeConnectionStatus pattern
+- All acceptance criteria verified
+
+**Notes:**
+- Followed ClaudeConnectionStatus pattern for consistency
+- Confirmation dialog prevents accidental disconnects
+- Error messages displayed below status area
+
+---
+
 ## Iteration 14 - 2026-01-13
 
 ### US-007: Create OpenAI Auth Form Component
