@@ -1,22 +1,47 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.routes import router
-from src.api.claude_routes import router as claude_router
+from src.api.claude_routes import router as claude_router, get_key_storage as get_claude_key_storage
 from src.api.generate_routes import router as generate_router
-from src.api.openai_routes import router as openai_router
+from src.api.openai_routes import router as openai_router, get_openai_key_storage
 from src.api.error_handlers import register_error_handlers
 from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
 from src.middleware.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
+from src.middleware.session_middleware import SessionMiddleware
+from src.services.session_manager import get_session_manager
+from src.tasks.cleanup import get_cleanup_task
 
 load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup and shutdown events."""
+    # Startup: Configure and start the cleanup task
+    cleanup_task = get_cleanup_task()
+
+    # Register key storages for cleanup on session expiry
+    cleanup_task.add_key_storage(get_claude_key_storage())
+    cleanup_task.add_key_storage(get_openai_key_storage())
+
+    # Start the background cleanup task (runs every hour)
+    await cleanup_task.start()
+
+    yield
+
+    # Shutdown: Stop the cleanup task
+    await cleanup_task.stop()
+
 
 app = FastAPI(
     title="LinkedIn Content Generator API",
     description="Analyze GitHub projects and generate LinkedIn post content",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Register secure error handlers
@@ -60,6 +85,9 @@ security_config = SecurityHeadersConfig(
     include_hsts=not is_development
 )
 app.add_middleware(SecurityHeadersMiddleware, config=security_config)
+
+# Session middleware - validates session expiry and returns 401 for expired sessions
+app.add_middleware(SessionMiddleware, session_manager=get_session_manager())
 
 app.include_router(router, prefix="/api")
 app.include_router(claude_router, prefix="/api")
