@@ -190,3 +190,32 @@ Started: 2026-01-13T12:53:33.551280
 - Commit: 4687938
 
 ---
+
+
+### 2026-01-13T13:52:00Z - US-004 PASSED
+- Updated backend/src/models/claude_schemas.py:
+  - Added Provider import from schemas
+  - Added OpenAIModel import from openai_schemas
+  - Extended ClaudeGenerateRequest with provider field (default: claude)
+  - Extended ClaudeGenerateRequest with optional model field for OpenAI
+- Updated backend/src/api/generate_routes.py:
+  - Added Provider import and get_openai_key_storage import
+  - Added OpenAIClient import
+  - Modified generate_ai_post to route to Claude or OpenAI based on provider param
+  - Default provider is Claude for backward compatibility
+  - Model param passed to OpenAI client when specified
+- Updated backend/tests/test_generate_routes.py:
+  - Added openai_connected_session fixture
+  - Added TestOpenAIProviderRouting class with 8 tests:
+    - test_generate_with_openai_provider_uses_openai_client
+    - test_generate_with_openai_provider_and_model
+    - test_generate_with_openai_no_connection_returns_401
+    - test_default_provider_is_claude
+    - test_explicit_claude_provider_uses_claude_client
+    - test_openai_rate_limit_returns_429
+    - test_openai_error_returns_error_response
+- All 422 backend tests pass
+- TypeScript compilation passes
+- Commit: fe4ce3b
+
+---

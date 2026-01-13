@@ -682,7 +682,7 @@
       "estimatedMinutes": 25,
       "filesAffected": [
         "backend/src/api/generate_routes.py",
-        "backend/src/models/schemas.py"
+        "backend/src/models/claude_schemas.py"
       ],
       "dependencies": [
         "US-002",
@@ -690,11 +690,11 @@
       ],
       "testStrategy": "Integration tests verifying provider routing logic",
       "securityCategory": "authorization",
-      "state": "pending",
-      "passes": false,
+      "state": "passed",
+      "passes": true,
       "retryCount": 0,
-      "notes": "",
-      "completedAt": null
+      "notes": "Updated ClaudeGenerateRequest with provider and model fields. Added 8 new tests.",
+      "completedAt": "2026-01-13T13:52:00.000Z"
     },
     {
       "id": "US-005",
