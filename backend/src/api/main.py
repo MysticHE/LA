@@ -8,6 +8,7 @@ from src.api.claude_routes import router as claude_router
 from src.api.generate_routes import router as generate_router
 from src.api.openai_routes import router as openai_router
 from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
+from src.middleware.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
 
 load_dotenv()
 
@@ -48,6 +49,13 @@ rate_limit_config = RateLimitConfig(
     generation_window_seconds=60,
 )
 app.add_middleware(RateLimitMiddleware, config=rate_limit_config)
+
+# Security headers - HSTS disabled in development
+is_development = os.getenv("ENVIRONMENT", "development").lower() == "development"
+security_config = SecurityHeadersConfig(
+    include_hsts=not is_development
+)
+app.add_middleware(SecurityHeadersMiddleware, config=security_config)
 
 app.include_router(router, prefix="/api")
 app.include_router(claude_router, prefix="/api")
