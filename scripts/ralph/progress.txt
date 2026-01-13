@@ -1,5 +1,29 @@
 # Ralph Progress Log
 
+## Iteration 17 - 2026-01-13
+
+### US-010: Integrate OpenAI Components into App
+
+**Status:** PASSED
+
+**Changes Made:**
+- Added OpenAIConnectionStatus import to App.tsx
+- Created grouped layout for AI Providers section
+- Displays both Claude and OpenAI connection status side-by-side
+- Uses responsive 2-column grid on medium+ screens
+- Added "AI Providers" heading and provider labels for clarity
+
+**Verification:**
+- TypeScript compilation passes (`npx tsc --noEmit`)
+- Build passes (`npm run build`)
+- All acceptance criteria verified
+
+**Notes:**
+- Both providers now visible in logical grouped layout
+- Responsive design stacks on mobile, side-by-side on desktop
+
+---
+
 ## Iteration 16 - 2026-01-13
 
 ### US-009: Create Provider Selector Component
