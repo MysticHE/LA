@@ -6,18 +6,14 @@ import { PostCard } from "@/components/posts/PostCard"
 import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
 import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
 import { OpenAIConnectionStatus } from "@/components/openai-auth/OpenAIConnectionStatus"
-import { TermsPage } from "@/components/legal/TermsPage"
+import { TermsModal } from "@/components/legal/TermsModal"
+import { PrivacyModal } from "@/components/legal/PrivacyModal"
 import { useAppStore } from "@/store/appStore"
-
-type Page = "home" | "terms"
 
 function App() {
   const { analysis } = useAppStore()
-  const [currentPage, setCurrentPage] = useState<Page>("home")
-
-  if (currentPage === "terms") {
-    return <TermsPage onBack={() => setCurrentPage("home")} />
-  }
+  const [termsOpen, setTermsOpen] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -60,31 +56,24 @@ function App() {
           )}
         </div>
       </main>
+
       <footer className="border-t py-6 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-4">
             <div className="text-center text-sm text-muted-foreground">
               Built for developers who want to share their work
             </div>
-            <div className="text-center text-xs text-muted-foreground space-y-2">
-              <p className="font-medium">Privacy Notice</p>
-              <p>
-                Your API keys are encrypted (AES-256) and stored temporarily on our servers for session use only.
-                Keys are automatically deleted after 24 hours of inactivity.
-              </p>
-              <p>
-                <strong>Cross-border Transfer:</strong> When you use this service, your API keys are transmitted to
-                Anthropic (USA) or OpenAI (USA) to process your requests. By connecting your API key, you consent
-                to this data transfer.
-              </p>
-              <p className="text-muted-foreground/70">
-                We do not store, log, or have access to your generated content. All processing happens via your own API keys.
-              </p>
-            </div>
-            <div className="text-center pt-2 border-t border-border/50">
+            <div className="flex items-center justify-center gap-4 text-xs">
               <button
-                onClick={() => setCurrentPage("terms")}
-                className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+                onClick={() => setPrivacyOpen(true)}
+                className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+              >
+                Privacy Notice
+              </button>
+              <span className="text-muted-foreground/50">|</span>
+              <button
+                onClick={() => setTermsOpen(true)}
+                className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
               >
                 Terms & Conditions
               </button>
@@ -92,6 +81,10 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Modals */}
+      <TermsModal open={termsOpen} onOpenChange={setTermsOpen} />
+      <PrivacyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
     </div>
   )
 }

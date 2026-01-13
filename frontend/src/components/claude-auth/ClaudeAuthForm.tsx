@@ -144,7 +144,11 @@ export function ClaudeAuthForm({ onSuccess }: ClaudeAuthFormProps) {
             <div className="space-y-2">
               <Checkbox
                 {...register("consent")}
-                label="I consent to my API key being transmitted to Anthropic (USA) for processing requests. My key will be encrypted and automatically deleted after 24 hours of inactivity."
+                label={
+                  <span className="text-xs text-muted-foreground">
+                    Read Terms & Conditions, give consent
+                  </span>
+                }
               />
               {errors.consent && (
                 <p className="text-sm text-destructive">
