@@ -1,3 +1,5 @@
+import { getSessionId } from './session'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 
 // Error type for API errors
@@ -218,12 +220,12 @@ export const api = {
   },
 
   // Claude Auth API
-  async connectClaude(apiKey: string, sessionId = "default"): Promise<ClaudeAuthResponse> {
+  async connectClaude(apiKey: string): Promise<ClaudeAuthResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/connect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
       body: JSON.stringify({ api_key: apiKey }),
     })
@@ -242,20 +244,20 @@ export const api = {
     return response.json()
   },
 
-  async getClaudeStatus(sessionId = "default"): Promise<ClaudeStatusResponse> {
+  async getClaudeStatus(): Promise<ClaudeStatusResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/status`, {
       headers: {
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
     })
     return response.json()
   },
 
-  async disconnectClaude(sessionId = "default"): Promise<ClaudeAuthResponse> {
+  async disconnectClaude(): Promise<ClaudeAuthResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/claude/disconnect`, {
       method: "POST",
       headers: {
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
     })
 
@@ -274,12 +276,12 @@ export const api = {
   },
 
   // OpenAI Auth API
-  async connectOpenAI(apiKey: string, sessionId = "default"): Promise<OpenAIAuthResponse> {
+  async connectOpenAI(apiKey: string): Promise<OpenAIAuthResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/connect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
       body: JSON.stringify({ api_key: apiKey }),
     })
@@ -298,20 +300,20 @@ export const api = {
     return response.json()
   },
 
-  async getOpenAIStatus(sessionId = "default"): Promise<OpenAIStatusResponse> {
+  async getOpenAIStatus(): Promise<OpenAIStatusResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/status`, {
       headers: {
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
     })
     return response.json()
   },
 
-  async disconnectOpenAI(sessionId = "default"): Promise<OpenAIAuthResponse> {
+  async disconnectOpenAI(): Promise<OpenAIAuthResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/disconnect`, {
       method: "POST",
       headers: {
-        "X-Session-ID": sessionId,
+        "X-Session-ID": getSessionId(),
       },
     })
 
@@ -333,7 +335,6 @@ export const api = {
   async generateAIPost(
     analysis: AnalysisResult,
     style: string,
-    sessionId = "default",
     provider: AIProvider = 'claude',
     model?: string
   ): Promise<AIGenerateResponse> {
@@ -348,7 +349,7 @@ export const api = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Session-ID": sessionId,
+          "X-Session-ID": getSessionId(),
         },
         body: JSON.stringify(requestBody),
       },

@@ -94,7 +94,6 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
       const response: AIGenerateResponse = await api.generateAIPost(
         analysis,
         style,
-        "default",
         selectedProvider
       )
 

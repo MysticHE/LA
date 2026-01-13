@@ -7,13 +7,7 @@ import { useAppStore } from "@/store/appStore"
 import { api } from "@/lib/api"
 import { ClaudeAuthForm } from "./ClaudeAuthForm"
 
-interface ClaudeConnectionStatusProps {
-  sessionId?: string
-}
-
-export function ClaudeConnectionStatus({
-  sessionId = "default",
-}: ClaudeConnectionStatusProps) {
+export function ClaudeConnectionStatus() {
   const {
     claudeAuth,
     disconnectClaude,
@@ -36,7 +30,7 @@ export function ClaudeConnectionStatus({
     setClaudeError(null)
 
     try {
-      const response = await api.disconnectClaude(sessionId)
+      const response = await api.disconnectClaude()
 
       if (!response.connected) {
         disconnectClaude()

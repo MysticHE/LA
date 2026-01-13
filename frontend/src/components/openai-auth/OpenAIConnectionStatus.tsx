@@ -7,13 +7,7 @@ import { useAppStore } from "@/store/appStore"
 import { api } from "@/lib/api"
 import { OpenAIAuthForm } from "./OpenAIAuthForm"
 
-interface OpenAIConnectionStatusProps {
-  sessionId?: string
-}
-
-export function OpenAIConnectionStatus({
-  sessionId = "default",
-}: OpenAIConnectionStatusProps) {
+export function OpenAIConnectionStatus() {
   const {
     openaiAuth,
     disconnectOpenAI,
@@ -36,7 +30,7 @@ export function OpenAIConnectionStatus({
     setOpenAIError(null)
 
     try {
-      const response = await api.disconnectOpenAI(sessionId)
+      const response = await api.disconnectOpenAI()
 
       if (!response.connected) {
         disconnectOpenAI()
