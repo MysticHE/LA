@@ -157,6 +157,21 @@ export interface ClaudeStatusResponse {
   masked_key: string | null
 }
 
+// OpenAI Auth Types
+export interface OpenAIAuthResponse {
+  connected: boolean
+  masked_key: string | null
+  error?: string
+}
+
+export interface OpenAIStatusResponse {
+  connected: boolean
+  masked_key: string | null
+}
+
+// AI Provider Type
+export type AIProvider = 'claude' | 'openai'
+
 // AI Generation Types
 export interface AIGenerateRequest {
   analysis: AnalysisResult
@@ -258,12 +273,75 @@ export const api = {
     return response.json()
   },
 
+  // OpenAI Auth API
+  async connectOpenAI(apiKey: string, sessionId = "default"): Promise<OpenAIAuthResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/connect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-ID": sessionId,
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: false,
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
+    return response.json()
+  },
+
+  async getOpenAIStatus(sessionId = "default"): Promise<OpenAIStatusResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/status`, {
+      headers: {
+        "X-Session-ID": sessionId,
+      },
+    })
+    return response.json()
+  },
+
+  async disconnectOpenAI(sessionId = "default"): Promise<OpenAIAuthResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/disconnect`, {
+      method: "POST",
+      headers: {
+        "X-Session-ID": sessionId,
+      },
+    })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: true, // Keep connected on error
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
+    return response.json()
+  },
+
   // AI Generation API
   async generateAIPost(
     analysis: AnalysisResult,
     style: string,
-    sessionId = "default"
+    sessionId = "default",
+    provider: AIProvider = 'claude',
+    model?: string
   ): Promise<AIGenerateResponse> {
+    const requestBody: Record<string, unknown> = { analysis, style, provider }
+    if (model) {
+      requestBody.model = model
+    }
+
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/generate/ai-post`,
       {
@@ -272,7 +350,7 @@ export const api = {
           "Content-Type": "application/json",
           "X-Session-ID": sessionId,
         },
-        body: JSON.stringify({ analysis, style }),
+        body: JSON.stringify(requestBody),
       },
       60000 // 60 second timeout for AI generation
     )
@@ -293,11 +371,12 @@ export const api = {
     // Handle unauthorized (not connected)
     if (response.status === 401) {
       const data = await response.json().catch(() => ({}))
+      const providerName = provider === 'openai' ? 'OpenAI' : 'Claude'
       return {
         success: false,
         content: null,
         style: style,
-        error: data.detail || "Not connected to Claude. Please connect your API key.",
+        error: data.detail || `Not connected to ${providerName}. Please connect your API key.`,
       }
     }
 
