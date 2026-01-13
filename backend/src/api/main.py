@@ -7,6 +7,7 @@ from src.api.routes import router
 from src.api.claude_routes import router as claude_router
 from src.api.generate_routes import router as generate_router
 from src.api.openai_routes import router as openai_router
+from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
 
 load_dotenv()
 
@@ -38,6 +39,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting configuration from environment or defaults
+rate_limit_config = RateLimitConfig(
+    auth_limit=int(os.getenv("RATE_LIMIT_AUTH", "100")),
+    auth_window_seconds=60,
+    generation_limit=int(os.getenv("RATE_LIMIT_GENERATION", "20")),
+    generation_window_seconds=60,
+)
+app.add_middleware(RateLimitMiddleware, config=rate_limit_config)
 
 app.include_router(router, prefix="/api")
 app.include_router(claude_router, prefix="/api")
