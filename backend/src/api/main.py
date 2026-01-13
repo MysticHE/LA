@@ -7,6 +7,7 @@ from src.api.routes import router
 from src.api.claude_routes import router as claude_router
 from src.api.generate_routes import router as generate_router
 from src.api.openai_routes import router as openai_router
+from src.api.error_handlers import register_error_handlers
 from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
 from src.middleware.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
 
@@ -17,6 +18,9 @@ app = FastAPI(
     description="Analyze GitHub projects and generate LinkedIn post content",
     version="1.0.0",
 )
+
+# Register secure error handlers
+register_error_handlers(app)
 
 # CORS origins - add your Render frontend URL here
 cors_origins = [
