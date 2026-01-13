@@ -1,5 +1,31 @@
 # Ralph Progress Log
 
+## Iteration 16 - 2026-01-13
+
+### US-009: Create Provider Selector Component
+
+**Status:** PASSED
+
+**Changes Made:**
+- Created `frontend/src/components/provider/ProviderSelector.tsx`
+- Shows toggle buttons for Claude and OpenAI when both providers connected
+- Auto-selects single connected provider via useEffect
+- Updates selectedProvider in Zustand store on selection
+- Renders nothing if no providers connected
+- Shows simple "Using X" text when only one provider connected
+
+**Verification:**
+- TypeScript compilation passes (`npx tsc --noEmit`)
+- Build passes (`npm run build`)
+- All acceptance criteria verified
+
+**Notes:**
+- Used Button components instead of dropdown for cleaner UX
+- Added aria-label and aria-pressed for accessibility
+- Follows existing component patterns in the codebase
+
+---
+
 ## Iteration 15 - 2026-01-13
 
 ### US-008: Create OpenAI Connection Status Component
