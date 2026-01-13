@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Header } from "@/components/layout/Header"
 import { RepoInputForm } from "@/components/repo-input/RepoInputForm"
 import { AnalysisCard } from "@/components/analysis/AnalysisCard"
@@ -5,10 +6,18 @@ import { PostCard } from "@/components/posts/PostCard"
 import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
 import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
 import { OpenAIConnectionStatus } from "@/components/openai-auth/OpenAIConnectionStatus"
+import { TermsPage } from "@/components/legal/TermsPage"
 import { useAppStore } from "@/store/appStore"
+
+type Page = "home" | "terms"
 
 function App() {
   const { analysis } = useAppStore()
+  const [currentPage, setCurrentPage] = useState<Page>("home")
+
+  if (currentPage === "terms") {
+    return <TermsPage onBack={() => setCurrentPage("home")} />
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -71,6 +80,14 @@ function App() {
               <p className="text-muted-foreground/70">
                 We do not store, log, or have access to your generated content. All processing happens via your own API keys.
               </p>
+            </div>
+            <div className="text-center pt-2 border-t border-border/50">
+              <button
+                onClick={() => setCurrentPage("terms")}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+              >
+                Terms & Conditions
+              </button>
             </div>
           </div>
         </div>
