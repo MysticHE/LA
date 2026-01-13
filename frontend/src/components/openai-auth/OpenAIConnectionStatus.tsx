@@ -54,59 +54,73 @@ export function OpenAIConnectionStatus() {
     return <OpenAIAuthForm />
   }
 
+  // Format masked key to show only last 4 chars with limited asterisks
+  const formatMaskedKey = (key: string | null) => {
+    if (!key) return "****"
+    // Show "sk-...xxxx" format for cleaner display
+    const last4 = key.slice(-4)
+    return `sk-...${last4}`
+  }
+
   // Connected state
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Badge className="bg-green-500 hover:bg-green-500 text-white gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              Connected
-            </Badge>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Key className="h-4 w-4" />
-              <span>API Key: {openaiAuth.maskedKey}</span>
+      <CardContent className="pt-6 pb-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge className="bg-green-500 hover:bg-green-500 text-white gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Connected
+              </Badge>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Key className="h-4 w-4 shrink-0" />
+                <span className="font-mono">{formatMaskedKey(openaiAuth.maskedKey)}</span>
+              </div>
             </div>
+
+            {showConfirmation ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Disconnect?
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleConfirmDisconnect}
+                  disabled={openaiAuth.isLoading}
+                >
+                  {openaiAuth.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Yes"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelDisconnect}
+                  disabled={openaiAuth.isLoading}
+                >
+                  No
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDisconnectClick}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Unplug className="h-4 w-4 mr-1" />
+                Disconnect
+              </Button>
+            )}
           </div>
 
-          {showConfirmation ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Disconnect?
-              </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleConfirmDisconnect}
-                disabled={openaiAuth.isLoading}
-              >
-                {openaiAuth.isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Yes"
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelDisconnect}
-                disabled={openaiAuth.isLoading}
-              >
-                No
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDisconnectClick}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Unplug className="h-4 w-4 mr-1" />
-              Disconnect
-            </Button>
-          )}
+          <p className="text-xs text-muted-foreground">
+            Your OpenAI API key is connected and ready to generate content.
+          </p>
         </div>
 
         {openaiAuth.error && (
