@@ -65,3 +65,22 @@ Started: 2026-01-13T12:53:33.551280
 
 ---
 
+
+### 2026-01-13T05:21:00Z - US-003 PASSED
+- Created backend/src/api/openai_routes.py with:
+  - POST /api/auth/openai/connect - Validate and store OpenAI API key
+  - GET /api/auth/openai/status - Check connection status with masked key
+  - POST /api/auth/openai/disconnect - Remove stored API key
+  - Session-based key isolation using X-Session-ID header
+  - Separate KeyStorageService instance for OpenAI keys (isolated from Claude)
+- Updated backend/src/api/main.py to include openai_router
+- Created backend/tests/test_openai_routes.py with 27 comprehensive tests
+  - Tests connect/status/disconnect endpoints
+  - Tests session isolation
+  - Tests OpenAI and Claude key isolation
+- All 266 backend tests pass
+- TypeScript compilation passes
+- Commit: d996d4c
+
+---
+
