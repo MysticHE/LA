@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from "react"
-import { Sparkles, AlertCircle, Key, Clock, RefreshCw } from "lucide-react"
+import { Sparkles, AlertCircle, Key, Clock, RefreshCw, Bot } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppStore } from "@/store/appStore"
-import { api, ApiError, type AnalysisResult, type AIGenerateResponse } from "@/lib/api"
+import { api, ApiError, type AnalysisResult, type AIGenerateResponse, type AIProvider } from "@/lib/api"
 import { GeneratedContentPreview } from "./GeneratedContentPreview"
 import { useCountdown } from "@/hooks/useCountdown"
 
@@ -26,8 +26,13 @@ interface GeneratedContent {
   style: string
 }
 
+const PROVIDER_LABELS: Record<AIProvider, string> = {
+  claude: "Claude",
+  openai: "OpenAI",
+}
+
 export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
-  const { claudeAuth } = useAppStore()
+  const { claudeAuth, openaiAuth, selectedProvider, setSelectedProvider } = useAppStore()
   const countdown = useCountdown()
 
   const [selectedStyle, setSelectedStyle] = useState<PostStyle>("problem-solution")
@@ -40,6 +45,27 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
   const [error, setError] = useState<string | null>(null)
   const [isRetryable, setIsRetryable] = useState(false)
 
+  const claudeConnected = claudeAuth.isConnected
+  const openaiConnected = openaiAuth.isConnected
+  const anyProviderConnected = claudeConnected || openaiConnected
+  const bothProvidersConnected = claudeConnected && openaiConnected
+
+  // Auto-select provider when connection status changes
+  useEffect(() => {
+    if (bothProvidersConnected) {
+      // If both connected and no selection, default to claude
+      if (!selectedProvider) {
+        setSelectedProvider("claude")
+      }
+    } else if (claudeConnected) {
+      setSelectedProvider("claude")
+    } else if (openaiConnected) {
+      setSelectedProvider("openai")
+    } else {
+      setSelectedProvider(null)
+    }
+  }, [claudeConnected, openaiConnected, bothProvidersConnected, selectedProvider, setSelectedProvider])
+
   // Clear error when countdown finishes
   useEffect(() => {
     if (!countdown.isActive && countdown.secondsLeft === 0 && error) {
@@ -48,8 +74,8 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
   }, [countdown.isActive, countdown.secondsLeft, error])
 
   const handleGenerate = useCallback(async (style: PostStyle) => {
-    if (!claudeAuth.isConnected) {
-      setError("Please connect your Claude API key first.")
+    if (!anyProviderConnected || !selectedProvider) {
+      setError("Please connect an AI provider first.")
       setIsRetryable(false)
       return
     }
@@ -65,7 +91,12 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     countdown.reset()
 
     try {
-      const response: AIGenerateResponse = await api.generateAIPost(analysis, style)
+      const response: AIGenerateResponse = await api.generateAIPost(
+        analysis,
+        style,
+        "default",
+        selectedProvider
+      )
 
       if (response.success && response.content) {
         setGeneratedContents((prev) => ({
@@ -100,7 +131,7 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [analysis, claudeAuth.isConnected, countdown])
+  }, [analysis, anyProviderConnected, selectedProvider, countdown])
 
   const handleStyleChange = (value: string) => {
     setSelectedStyle(value as PostStyle)
@@ -113,8 +144,18 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     handleGenerate(selectedStyle)
   }
 
-  // If Claude is not connected, show connect prompt
-  if (!claudeAuth.isConnected) {
+  const handleProviderSelect = (provider: AIProvider) => {
+    setSelectedProvider(provider)
+    setError(null)
+    setIsRetryable(false)
+    countdown.reset()
+  }
+
+  // Get current provider label for display
+  const currentProviderLabel = selectedProvider ? PROVIDER_LABELS[selectedProvider] : "AI"
+
+  // If no provider is connected, show connect prompt
+  if (!anyProviderConnected) {
     return (
       <Card>
         <CardHeader>
@@ -123,16 +164,16 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
             AI Post Generator
           </CardTitle>
           <CardDescription>
-            Generate LinkedIn posts using Claude AI
+            Generate LinkedIn posts using AI
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
             <Key className="h-12 w-12 text-muted-foreground" />
             <div className="space-y-2">
-              <p className="font-medium">Connect Claude to Generate Posts</p>
+              <p className="font-medium">Connect an AI Provider to Generate Posts</p>
               <p className="text-sm text-muted-foreground">
-                Connect your Anthropic API key to enable AI-powered post generation.
+                Connect your Claude or OpenAI API key to enable AI-powered post generation.
               </p>
             </div>
           </div>
@@ -149,10 +190,43 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
           AI Post Generator
         </CardTitle>
         <CardDescription>
-          Generate LinkedIn posts using Claude AI based on your repository analysis
+          Generate LinkedIn posts using {currentProviderLabel} based on your repository analysis
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Provider Selector - only shown when both providers connected */}
+        {bothProvidersConnected && (
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <span className="text-sm font-medium">AI Provider</span>
+            <div className="flex gap-2">
+              <Button
+                variant={selectedProvider === "claude" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleProviderSelect("claude")}
+                disabled={isGenerating}
+                className="gap-1"
+                aria-label="Select Claude as AI provider"
+                aria-pressed={selectedProvider === "claude"}
+              >
+                <Sparkles className="h-4 w-4" />
+                Claude
+              </Button>
+              <Button
+                variant={selectedProvider === "openai" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleProviderSelect("openai")}
+                disabled={isGenerating}
+                className="gap-1"
+                aria-label="Select OpenAI as AI provider"
+                aria-pressed={selectedProvider === "openai"}
+              >
+                <Bot className="h-4 w-4" />
+                OpenAI
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Tabs value={selectedStyle} onValueChange={handleStyleChange}>
           <TabsList className="grid w-full grid-cols-3">
             {POST_STYLES.map((style) => (
@@ -164,9 +238,17 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
 
           {POST_STYLES.map((style) => (
             <TabsContent key={style.id} value={style.id} className="space-y-4">
-              {/* Loading State */}
+              {/* Loading State with Provider Indicator */}
               {isGenerating && selectedStyle === style.id && !generatedContents[style.id] && (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {selectedProvider === "openai" ? (
+                      <Bot className="h-4 w-4 animate-pulse" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 animate-pulse" />
+                    )}
+                    <span>Generating with {currentProviderLabel}...</span>
+                  </div>
                   <div className="space-y-3">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-4/5" />
@@ -198,12 +280,16 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
                   </p>
                   <Button
                     onClick={() => handleGenerate(style.id)}
-                    disabled={isGenerating || countdown.isActive}
+                    disabled={isGenerating || countdown.isActive || !selectedProvider}
                   >
-                    <Sparkles className="h-4 w-4" />
+                    {selectedProvider === "openai" ? (
+                      <Bot className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
                     {countdown.isActive
                       ? `Wait ${countdown.secondsLeft}s`
-                      : "Generate Post"}
+                      : `Generate with ${currentProviderLabel}`}
                   </Button>
                 </div>
               )}
