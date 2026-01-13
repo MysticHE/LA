@@ -134,3 +134,32 @@ Started: 2026-01-13T12:53:33.551280
 - Commit: a8b999a
 
 ---
+
+### 2026-01-13T05:45:00Z - US-SEC-004 PASSED
+- Created backend/src/services/audit_logger.py with:
+  - AuditEventType enum (key_connect, key_disconnect, unauthorized_access)
+  - AuditStatus enum (success, failure, denied)
+  - AuditEntry dataclass with session_id, timestamp, status, provider, etc.
+  - AuditLogger class with log_key_connect, log_key_disconnect, log_unauthorized_access
+  - All fields automatically redacted for API keys (session_id, error_message, details)
+  - Query methods: query_by_session, query_by_timestamp_range, query_by_session_and_timestamp
+  - Uses timezone-aware datetime (Python 3.14 compatible)
+- Updated backend/src/api/openai_routes.py:
+  - Added audit logging to connect endpoint (success/failure)
+  - Added audit logging to disconnect endpoint (success/unauthorized)
+- Updated backend/src/api/claude_routes.py:
+  - Added audit logging to connect endpoint (success/failure)
+  - Added audit logging to disconnect endpoint (success/unauthorized)
+- Created backend/tests/test_audit_logger.py with 30 comprehensive tests
+  - Tests AuditEntry creation and serialization
+  - Tests key connect/disconnect logging with all fields
+  - Tests unauthorized access logging with full request details
+  - Tests comprehensive API key redaction (never leaks keys)
+  - Tests query by session_id
+  - Tests query by timestamp range
+  - Tests global singleton pattern
+- All 367 backend tests pass
+- TypeScript compilation passes
+- Commit: b88336b
+
+---
