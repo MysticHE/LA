@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge"
 import { useAppStore } from "@/store/appStore"
 
 export function Header() {
-  const { claudeAuth } = useAppStore()
+  const { claudeAuth, openaiAuth } = useAppStore()
+
+  // Determine connection status
+  const isAnyConnected = claudeAuth.isConnected || openaiAuth.isConnected
+  const connectedProviders: string[] = []
+  if (claudeAuth.isConnected) connectedProviders.push("Claude")
+  if (openaiAuth.isConnected) connectedProviders.push("OpenAI")
 
   return (
     <header className="border-b">
@@ -14,16 +20,16 @@ export function Header() {
           <h1 className="text-xl font-semibold">LinkedIn Content Generator</h1>
         </div>
         <div className="flex items-center gap-4">
-          {/* Claude Connection Status Indicator */}
-          {claudeAuth.isConnected ? (
+          {/* AI Connection Status Indicator */}
+          {isAnyConnected ? (
             <Badge className="bg-green-500 hover:bg-green-500 text-white gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              Claude Connected
+              {connectedProviders.join(" + ")} Ready
             </Badge>
           ) : (
             <Badge variant="outline" className="gap-1 text-muted-foreground">
               <Key className="h-3 w-3" />
-              Claude Not Connected
+              No AI Connected
             </Badge>
           )}
           <Button variant="ghost" size="icon" asChild>
