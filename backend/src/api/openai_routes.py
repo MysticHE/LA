@@ -13,6 +13,7 @@ from src.models.openai_schemas import (
 )
 from src.services.key_storage_service import KeyStorageService
 from src.services.openai_client import OpenAIClient
+from src.services.audit_logger import get_audit_logger, AuditStatus
 
 # Create router for OpenAI-related endpoints
 router = APIRouter(prefix="/auth/openai", tags=["openai-auth"])
@@ -98,11 +99,19 @@ async def connect_openai(
     """
     # Use session ID from header or generate a default one
     session_id = x_session_id or "default"
+    audit = get_audit_logger()
 
     # Validate the API key
     is_valid, error_message = await validate_openai_api_key(request.api_key)
 
     if not is_valid:
+        # Log failed connection attempt
+        audit.log_key_connect(
+            session_id=session_id,
+            provider="openai",
+            status=AuditStatus.FAILURE,
+            error_message=error_message
+        )
         # Return 400 with error message for invalid keys
         raise HTTPException(
             status_code=400,
@@ -115,6 +124,13 @@ async def connect_openai(
 
     # Get masked key for response
     masked_key = storage.get_masked_key(session_id)
+
+    # Log successful connection
+    audit.log_key_connect(
+        session_id=session_id,
+        provider="openai",
+        status=AuditStatus.SUCCESS
+    )
 
     return OpenAIAuthResponse(
         connected=True,
@@ -141,9 +157,17 @@ async def disconnect_openai(
     """
     session_id = x_session_id or "default"
     storage = get_openai_key_storage()
+    audit = get_audit_logger()
 
     # Check if a key exists for this session
     if not storage.exists(session_id):
+        # Log unauthorized disconnect attempt
+        audit.log_unauthorized_access(
+            session_id=session_id,
+            request_path="/auth/openai/disconnect",
+            request_method="POST",
+            error_message="No OpenAI API key connected for this session"
+        )
         raise HTTPException(
             status_code=400,
             detail="No OpenAI API key connected for this session"
@@ -151,6 +175,13 @@ async def disconnect_openai(
 
     # Delete the stored key
     storage.delete(session_id)
+
+    # Log successful disconnect
+    audit.log_key_disconnect(
+        session_id=session_id,
+        provider="openai",
+        status=AuditStatus.SUCCESS
+    )
 
     return OpenAIAuthResponse(
         connected=False,
