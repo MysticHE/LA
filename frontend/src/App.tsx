@@ -4,6 +4,7 @@ import { AnalysisCard } from "@/components/analysis/AnalysisCard"
 import { PostCard } from "@/components/posts/PostCard"
 import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
 import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
+import { OpenAIConnectionStatus } from "@/components/openai-auth/OpenAIConnectionStatus"
 import { useAppStore } from "@/store/appStore"
 
 function App() {
@@ -23,8 +24,20 @@ function App() {
             </p>
           </div>
 
-          {/* Claude Connection - Always visible for easy access */}
-          <ClaudeConnectionStatus />
+          {/* AI Provider Connections - Always visible for easy access */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">AI Providers</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Anthropic Claude</p>
+                <ClaudeConnectionStatus />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">OpenAI GPT</p>
+                <OpenAIConnectionStatus />
+              </div>
+            </div>
+          </div>
 
           <RepoInputForm />
           <AnalysisCard />
