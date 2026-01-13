@@ -48,3 +48,20 @@ Started: 2026-01-13T12:53:33.551280
 
 ---
 
+
+### 2026-01-13T05:15:00Z - US-SEC-006 PASSED
+- Added Provider enum to backend/src/models/schemas.py
+  - Values: CLAUDE = "claude", OPENAI = "openai"
+  - String enum extends str for easy serialization
+- Created backend/tests/test_provider_model_validation.py with 22 tests
+  - Tests Provider enum has exactly ['claude', 'openai']
+  - Tests OpenAIModel enum has exactly ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo']
+  - Tests invalid values are rejected with ValidationError
+  - Tests error messages include allowed values
+  - Tests Pydantic enforces enum validation
+- All 239 backend tests pass
+- TypeScript compilation passes
+- Commit: d956306
+
+---
+
