@@ -146,7 +146,7 @@ export function ClaudeAuthForm({ onSuccess }: ClaudeAuthFormProps) {
                 {...register("consent")}
                 label={
                   <span className="text-xs text-muted-foreground">
-                    Read Terms & Conditions, give consent
+                    Consent Given, Read Terms & Conditions
                   </span>
                 }
               />
