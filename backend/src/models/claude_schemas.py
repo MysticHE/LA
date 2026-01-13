@@ -2,7 +2,8 @@
 
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
-from .schemas import AnalysisResult, PostStyle
+from .schemas import AnalysisResult, PostStyle, Provider
+from .openai_schemas import OpenAIModel
 
 
 class ClaudeAuthRequest(BaseModel):
@@ -50,6 +51,14 @@ class ClaudeGenerateRequest(BaseModel):
     style: PostStyle = Field(
         default=PostStyle.PROBLEM_SOLUTION,
         description="Post style template to use for generation"
+    )
+    provider: Provider = Field(
+        default=Provider.CLAUDE,
+        description="AI provider to use for generation (claude or openai)"
+    )
+    model: Optional[OpenAIModel] = Field(
+        default=None,
+        description="OpenAI model to use when provider is 'openai'. Ignored for Claude."
     )
 
 
