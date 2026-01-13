@@ -1,5 +1,32 @@
 # Ralph Progress Log
 
+## Iteration 13 - 2026-01-13
+
+### US-006: Add OpenAI API Functions
+
+**Status:** PASSED
+
+**Changes Made:**
+- Added `OpenAIAuthResponse` interface with connected, masked_key, error fields
+- Added `OpenAIStatusResponse` interface with connected, masked_key fields
+- Added `AIProvider` type ('claude' | 'openai')
+- Added `connectOpenAI` function - POSTs to /api/auth/openai/connect
+- Added `getOpenAIStatus` function - GETs /api/auth/openai/status
+- Added `disconnectOpenAI` function - POSTs to /api/auth/openai/disconnect
+- Updated `generateAIPost` to accept `provider` and `model` parameters
+- Updated error message in generateAIPost to be provider-aware
+
+**Verification:**
+- TypeScript compilation passes (`npx tsc --noEmit`)
+- Build passes (`npm run build`)
+- No test script exists in frontend yet (npm run test not available)
+
+**Notes:**
+- Followed existing Claude API pattern for consistency
+- Added provider-aware error messages in generateAIPost
+
+---
+
 ## Iteration 12 - 2026-01-13
 
 ### US-005: Add OpenAI State to Zustand Store
