@@ -890,11 +890,11 @@
       ],
       "testStrategy": "Component tests for provider selection and generation flow",
       "securityCategory": "none",
-      "state": "pending",
-      "passes": false,
+      "state": "passed",
+      "passes": true,
       "retryCount": 0,
-      "notes": "",
-      "completedAt": null
+      "notes": "Added provider selector to AIPostGenerator. Shows selector when both providers connected, calls API with selected provider, shows generating status with provider name.",
+      "completedAt": "2026-01-13T06:26:51.164238Z"
     },
     {
       "id": "US-SEC-001",

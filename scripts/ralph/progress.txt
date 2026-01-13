@@ -155,3 +155,30 @@
 **Notes:**
 - Followed existing ClaudeAuth pattern for consistency
 - Store structure mirrors claudeAuth for predictable usage
+
+---
+
+## Iteration 18 - 2026-01-13
+
+### US-011: Update AI Post Generator for Provider Selection
+
+**Status:** PASSED
+
+**Changes Made:**
+- Updated `frontend/src/components/posts/AIPostGenerator.tsx`
+- Added provider selector UI when both Claude and OpenAI are connected
+- Calls API with selected provider parameter
+- Shows which provider is generating during loading state ("Generating with Claude/OpenAI...")
+- Auto-selects provider based on connection status
+- Updated messages and buttons to reflect selected provider
+- Added Bot icon for OpenAI, Sparkles for Claude
+
+**Verification:**
+- TypeScript compilation passes (`npx tsc --noEmit`)
+- Build passes (`npm run build`)
+- All acceptance criteria verified
+
+**Notes:**
+- Provider selector only appears when both providers connected
+- Single connected provider is auto-selected
+- Provider selection persists in Zustand store
