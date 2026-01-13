@@ -51,9 +51,28 @@ function App() {
           )}
         </div>
       </main>
-      <footer className="border-t py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          Built for developers who want to share their work
+      <footer className="border-t py-6 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="text-center text-sm text-muted-foreground">
+              Built for developers who want to share their work
+            </div>
+            <div className="text-center text-xs text-muted-foreground space-y-2">
+              <p className="font-medium">Privacy Notice</p>
+              <p>
+                Your API keys are encrypted (AES-256) and stored temporarily on our servers for session use only.
+                Keys are automatically deleted after 24 hours of inactivity.
+              </p>
+              <p>
+                <strong>Cross-border Transfer:</strong> When you use this service, your API keys are transmitted to
+                Anthropic (USA) or OpenAI (USA) to process your requests. By connecting your API key, you consent
+                to this data transfer.
+              </p>
+              <p className="text-muted-foreground/70">
+                We do not store, log, or have access to your generated content. All processing happens via your own API keys.
+              </p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

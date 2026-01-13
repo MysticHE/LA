@@ -47,20 +47,16 @@ app = FastAPI(
 # Register secure error handlers
 register_error_handlers(app)
 
-# CORS origins - add your Render frontend URL here
+# CORS origins - explicitly configured for security
 cors_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-# Add production frontend URL from environment
+# Add production frontend URL from environment (required for deployment)
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url:
     cors_origins.append(frontend_url)
-
-# Allow all origins in development (when ALLOW_ALL_ORIGINS is set)
-if os.getenv("ALLOW_ALL_ORIGINS", "").lower() == "true":
-    cors_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,

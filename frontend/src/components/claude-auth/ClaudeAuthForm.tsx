@@ -5,6 +5,7 @@ import { z } from "zod"
 import { Key, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAppStore } from "@/store/appStore"
 import { api, ApiError, getUserFriendlyError } from "@/lib/api"
@@ -14,6 +15,9 @@ const formSchema = z.object({
     .string()
     .min(1, "API key is required")
     .regex(/^sk-ant-/, "API key must start with 'sk-ant-'"),
+  consent: z.boolean().refine((val) => val === true, {
+    message: "You must consent to the data transfer to continue",
+  }),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -37,12 +41,16 @@ export function ClaudeAuthForm({ onSuccess }: ClaudeAuthFormProps) {
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       apiKey: "",
+      consent: false,
     },
   })
+
+  const consentChecked = watch("consent")
 
   const onSubmit = async (data: FormData) => {
     setClaudeLoading(true)
@@ -133,9 +141,21 @@ export function ClaudeAuthForm({ onSuccess }: ClaudeAuthFormProps) {
               </div>
             )}
 
+            <div className="space-y-2">
+              <Checkbox
+                {...register("consent")}
+                label="I consent to my API key being transmitted to Anthropic (USA) for processing requests. My key will be encrypted and automatically deleted after 24 hours of inactivity."
+              />
+              {errors.consent && (
+                <p className="text-sm text-destructive">
+                  {errors.consent.message}
+                </p>
+              )}
+            </div>
+
             <Button
               type="submit"
-              disabled={claudeAuth.isLoading}
+              disabled={claudeAuth.isLoading || !consentChecked}
               className="w-full"
             >
               {claudeAuth.isLoading ? (

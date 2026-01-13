@@ -5,6 +5,7 @@ import { z } from "zod"
 import { Key, Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAppStore } from "@/store/appStore"
 import { api, ApiError, getUserFriendlyError } from "@/lib/api"
@@ -14,6 +15,9 @@ const formSchema = z.object({
     .string()
     .min(1, "API key is required")
     .regex(/^sk-/, "API key must start with 'sk-'"),
+  consent: z.boolean().refine((val) => val === true, {
+    message: "You must consent to the data transfer to continue",
+  }),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -37,12 +41,16 @@ export function OpenAIAuthForm({ onSuccess }: OpenAIAuthFormProps) {
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       apiKey: "",
+      consent: false,
     },
   })
+
+  const consentChecked = watch("consent")
 
   const onSubmit = async (data: FormData) => {
     setOpenAILoading(true)
@@ -133,9 +141,21 @@ export function OpenAIAuthForm({ onSuccess }: OpenAIAuthFormProps) {
               </div>
             )}
 
+            <div className="space-y-2">
+              <Checkbox
+                {...register("consent")}
+                label="I consent to my API key being transmitted to OpenAI (USA) for processing requests. My key will be encrypted and automatically deleted after 24 hours of inactivity."
+              />
+              {errors.consent && (
+                <p className="text-sm text-destructive">
+                  {errors.consent.message}
+                </p>
+              )}
+            </div>
+
             <Button
               type="submit"
-              disabled={openaiAuth.isLoading}
+              disabled={openaiAuth.isLoading || !consentChecked}
               className="w-full"
             >
               {openaiAuth.isLoading ? (
