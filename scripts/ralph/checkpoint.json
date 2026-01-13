@@ -1,0 +1,19 @@
+{
+  "story_id": "US-SEC-006",
+  "iteration": 4,
+  "state": "in_progress",
+  "timestamp": "2026-01-13T13:11:42.576133",
+  "metrics": {
+    "session_id": "20260113_125333",
+    "start_time": "2026-01-13T12:53:33.550028",
+    "end_time": null,
+    "total_iterations": 3,
+    "stories_completed": 3,
+    "stories_failed": 0,
+    "total_retries": 0,
+    "errors_encountered": 0,
+    "patterns_learned": 0,
+    "errors": [],
+    "duration_seconds": null
+  }
+}

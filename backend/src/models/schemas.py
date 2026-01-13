@@ -3,6 +3,12 @@ from typing import Optional
 from enum import Enum
 
 
+class Provider(str, Enum):
+    """Available AI providers for content generation."""
+    CLAUDE = "claude"
+    OPENAI = "openai"
+
+
 class PostStyle(str, Enum):
     PROBLEM_SOLUTION = "problem-solution"
     TIPS_LEARNINGS = "tips-learnings"
