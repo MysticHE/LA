@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   ImageIcon,
   AlertCircle,
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { useAppStore } from "@/store/appStore"
 import { api, ApiError } from "@/lib/api"
 import { useCountdown } from "@/hooks/useCountdown"
+import { ImagePreview, type GeneratedImageData } from "./ImagePreview"
 
 // Image styles from backend - matches ImageStyle enum
 const IMAGE_STYLES = [
@@ -50,16 +52,11 @@ type ImageDimensionId = (typeof IMAGE_DIMENSIONS)[number]["id"]
 
 interface ImageGenerationPanelProps {
   postContent: string
+  /** Optional: compact mode for embedding in other components */
+  compact?: boolean
 }
 
-interface GeneratedImage {
-  imageBase64: string
-  contentType: string
-  style: string
-  dimensions: string
-}
-
-export function ImageGenerationPanel({ postContent }: ImageGenerationPanelProps) {
+export function ImageGenerationPanel({ postContent, compact: _compact = false }: ImageGenerationPanelProps) {
   const { geminiAuth } = useAppStore()
   const countdown = useCountdown()
 
@@ -72,7 +69,7 @@ export function ImageGenerationPanel({ postContent }: ImageGenerationPanelProps)
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null)
+  const [generatedImage, setGeneratedImage] = useState<GeneratedImageData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isRetryable, setIsRetryable] = useState(false)
 
@@ -327,46 +324,12 @@ export function ImageGenerationPanel({ postContent }: ImageGenerationPanelProps)
           </div>
         </div>
 
-        {/* Dimension Preview */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Preview</h4>
-          <div
-            className="w-full max-w-md mx-auto bg-muted/50 rounded-lg border border-dashed border-border flex items-center justify-center"
-            style={{ aspectRatio }}
-          >
-            {generatedImage ? (
-              <img
-                src={`data:image/png;base64,${generatedImage.imageBase64}`}
-                alt="Generated LinkedIn post image"
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : isGenerating ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="text-sm">Generating image...</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground p-4">
-                <ImageIcon className="h-8 w-8" />
-                <span className="text-sm text-center">
-                  {selectedDimensionInfo?.description || "Select dimensions"}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Generate Button */}
         <div className="flex justify-center gap-2">
           {isGenerating ? (
             <Button variant="destructive" onClick={handleCancel} className="gap-2">
               <X className="h-4 w-4" />
-              Cancel
-            </Button>
-          ) : generatedImage ? (
-            <Button onClick={handleRegenerate} disabled={countdown.isActive} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              {countdown.isActive ? `Wait ${countdown.secondsLeft}s` : "Regenerate"}
+              Cancel Generation
             </Button>
           ) : (
             <Button
@@ -380,77 +343,105 @@ export function ImageGenerationPanel({ postContent }: ImageGenerationPanelProps)
           )}
         </div>
 
-        {/* Loading State with Spinner */}
-        {isGenerating && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Generating with Gemini...</span>
-          </div>
-        )}
-
-        {/* Error Display */}
-        {error && (
-          <div className="flex items-start gap-2 text-destructive bg-destructive/10 p-3 rounded-md">
-            <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm">{error}</p>
-              {/* Rate Limit Countdown */}
-              {countdown.isActive && countdown.secondsLeft > 0 && (
-                <div className="flex items-center gap-2 mt-2 text-xs">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    Retry available in {countdown.secondsLeft} second
-                    {countdown.secondsLeft !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              )}
-              {/* Retry Button */}
-              {isRetryable && !countdown.isActive && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 h-8"
-                  onClick={() => {
-                    setError(null)
-                    setIsRetryable(false)
-                    handleGenerate()
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Try Again
-                </Button>
-              )}
-              {/* Dismiss Button */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-2 h-8 px-2 ml-2"
-                onClick={() => {
-                  setError(null)
-                  setIsRetryable(false)
-                  countdown.reset()
-                }}
+        {/* Loading State with Animation */}
+        <AnimatePresence>
+          {isGenerating && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div
+                className="w-full max-w-md mx-auto bg-muted/50 rounded-lg border border-dashed border-border flex items-center justify-center"
+                style={{ aspectRatio }}
               >
-                Dismiss
-              </Button>
-            </div>
-          </div>
-        )}
+                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <span className="text-sm font-medium">Generating with Gemini...</span>
+                  <span className="text-xs">This may take a few moments</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Generated Image Info */}
-        {generatedImage && (
-          <div className="text-xs text-muted-foreground text-center space-y-1">
-            <p>
-              Style: <span className="font-medium">{generatedImage.style}</span> |
-              Dimensions: <span className="font-medium">{generatedImage.dimensions}</span>
-            </p>
-            <p>
-              Content Type: <span className="font-medium">{generatedImage.contentType}</span>
-            </p>
-          </div>
-        )}
+        {/* Generated Image Preview with ImagePreview Component */}
+        <AnimatePresence>
+          {generatedImage && !isGenerating && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <ImagePreview
+                image={generatedImage}
+                altText="Generated LinkedIn post image"
+                onRegenerate={handleRegenerate}
+                isRegenerating={isGenerating}
+                onClose={() => setGeneratedImage(null)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Error Display with Animation */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-start gap-2 text-destructive bg-destructive/10 p-3 rounded-md"
+            >
+              <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm">{error}</p>
+                {countdown.isActive && countdown.secondsLeft > 0 && (
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      Retry available in {countdown.secondsLeft} second
+                      {countdown.secondsLeft !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  {isRetryable && !countdown.isActive && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => {
+                        setError(null)
+                        setIsRetryable(false)
+                        handleGenerate()
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Try Again
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      setError(null)
+                      setIsRetryable(false)
+                      countdown.reset()
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardContent>
     </Card>
   )
