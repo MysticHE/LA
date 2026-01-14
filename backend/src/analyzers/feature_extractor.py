@@ -1,6 +1,14 @@
 import re
-from typing import Optional
+import json
+import logging
+from typing import Optional, TYPE_CHECKING
+
 from src.models.schemas import Feature
+
+if TYPE_CHECKING:
+    from src.services.openai_client import OpenAIClient
+
+logger = logging.getLogger(__name__)
 
 
 class FeatureExtractor:
@@ -34,13 +42,24 @@ class FeatureExtractor:
         readme: Optional[str],
         file_contents: dict[str, str],
         file_structure: list[str],
+        openai_client: Optional["OpenAIClient"] = None,
+        repo_description: str = "",
     ) -> list[Feature]:
-        """Extract features prioritizing unique project-specific ones."""
+        """Extract features prioritizing AI extraction when available."""
         features = []
         seen_names = set()
 
-        # 1. First priority: Extract unique features from README
-        if readme:
+        # 1. First priority: AI extraction (if client available)
+        if readme and openai_client:
+            ai_features = self._extract_with_ai(readme, openai_client, repo_description)
+            for f in ai_features:
+                name_lower = f.name.lower()
+                if name_lower not in seen_names:
+                    features.append(f)
+                    seen_names.add(name_lower)
+
+        # 2. Fall back to regex if AI returned < 3 features
+        if len(features) < 3 and readme:
             readme_features = self._extract_unique_from_readme(readme)
             for f in readme_features:
                 name_lower = f.name.lower()
@@ -48,7 +67,7 @@ class FeatureExtractor:
                     features.append(f)
                     seen_names.add(name_lower)
 
-        # 2. Second priority: Extract from project description (first paragraph)
+        # 3. Extract from project description if still < 5 features
         if readme and len(features) < 5:
             desc_features = self._extract_from_description(readme)
             for f in desc_features:
@@ -57,7 +76,7 @@ class FeatureExtractor:
                     features.append(f)
                     seen_names.add(name_lower)
 
-        # 3. Fallback: Only add generic categories if we have < 3 features
+        # 4. Fallback: Only add generic categories if we have < 3 features
         if len(features) < 3:
             search_text = " ".join([
                 readme or "",
@@ -68,6 +87,71 @@ class FeatureExtractor:
             features.extend(fallback_features)
 
         return features[:7]
+
+    def _extract_with_ai(
+        self,
+        readme: str,
+        openai_client: "OpenAIClient",
+        repo_description: str = "",
+    ) -> list[Feature]:
+        """Use AI to extract key features from README content."""
+        prompt = f"""Extract 3-7 key features from this project README.
+
+Rules:
+- Focus on what makes this project unique and useful
+- Use concise feature names (2-5 words each)
+- Skip generic features like "API", "Database", "Testing", "CI/CD"
+- Extract actual capabilities, not section headers
+- Each feature should describe a distinct capability
+
+README:
+{readme[:4000]}
+
+{f"Project description: {repo_description}" if repo_description else ""}
+
+Return ONLY a JSON array in this exact format:
+[{{"name": "Feature Name", "description": "Brief description of the feature"}}]"""
+
+        try:
+            result = openai_client.generate_content(
+                system_prompt="You extract project features from README files. Return only valid JSON array, no markdown.",
+                user_prompt=prompt,
+                model="gpt-4o-mini",
+                max_tokens=500,
+            )
+
+            if result.success and result.content:
+                return self._parse_ai_features(result.content)
+        except Exception as e:
+            logger.warning(f"AI feature extraction failed: {e}")
+
+        return []
+
+    def _parse_ai_features(self, content: str) -> list[Feature]:
+        """Parse AI-generated JSON into Feature objects."""
+        try:
+            content = content.strip()
+            if content.startswith("```"):
+                content = re.sub(r"```(?:json)?\s*", "", content)
+                content = content.rstrip("`")
+
+            features_data = json.loads(content)
+
+            if not isinstance(features_data, list):
+                return []
+
+            features = []
+            for item in features_data[:7]:
+                if isinstance(item, dict) and "name" in item:
+                    name = str(item["name"]).strip()[:50]
+                    desc = str(item.get("description", name)).strip()[:100]
+                    if name and len(name) >= 3:
+                        features.append(Feature(name=name, description=desc))
+
+            return features
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Failed to parse AI features: {e}")
+            return []
 
     def _extract_unique_from_readme(self, readme: str) -> list[Feature]:
         """Extract actual feature descriptions from README sections."""

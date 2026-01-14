@@ -1,18 +1,26 @@
 import re
 import os
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from github import Github, GithubException
 from src.models.schemas import AnalysisResult, TechStackItem, Feature
 from src.analyzers.code_analyzer import CodeAnalyzer
 from src.analyzers.feature_extractor import FeatureExtractor
 
+if TYPE_CHECKING:
+    from src.services.openai_client import OpenAIClient
+
 
 class GitHubAnalyzer:
-    def __init__(self, token: Optional[str] = None):
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        openai_client: Optional["OpenAIClient"] = None,
+    ):
         self.token = token or os.getenv("GITHUB_TOKEN")
         self.github = Github(self.token) if self.token else Github()
         self.code_analyzer = CodeAnalyzer()
         self.feature_extractor = FeatureExtractor()
+        self.openai_client = openai_client
 
     def _parse_repo_url(self, url: str) -> tuple[str, str]:
         """Extract owner and repo name from GitHub URL."""
@@ -45,7 +53,11 @@ class GitHubAnalyzer:
 
         tech_stack = self.code_analyzer.analyze(repo_contents, repo.language)
         features = self.feature_extractor.extract(
-            readme_content, repo_contents, file_structure
+            readme_content,
+            repo_contents,
+            file_structure,
+            openai_client=self.openai_client,
+            repo_description=repo.description or "",
         )
 
         readme_summary = self._summarize_readme(readme_content)
