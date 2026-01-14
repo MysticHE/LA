@@ -1,6 +1,7 @@
 import { Linkedin, Github, CheckCircle2, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useAppStore } from "@/store/appStore"
 
 export function Header() {
@@ -32,6 +33,7 @@ export function Header() {
               No AI Connected
             </Badge>
           )}
+          <ThemeToggle />
           <Button variant="ghost" size="icon" asChild>
             <a
               href="https://github.com"
