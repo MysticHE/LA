@@ -7,7 +7,7 @@ Gemini API keys with secure session-based storage.
 from fastapi import APIRouter, HTTPException, Header
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
 
 from src.models.gemini_schemas import (
     GeminiAuthRequest,
@@ -41,14 +41,15 @@ async def validate_gemini_api_key(api_key: str) -> tuple[bool, Optional[str]]:
         If invalid, returns (False, error_message).
     """
     try:
-        # Configure the SDK with the provided API key
-        genai.configure(api_key=api_key)
+        # Create client with the provided API key
+        client = genai.Client(api_key=api_key)
 
         # Make a minimal API call to validate the key
-        # Using list_models is a lightweight way to verify the key
-        # without incurring significant costs
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        model.generate_content("test", generation_config={"max_output_tokens": 1})
+        client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents="test",
+            config={"max_output_tokens": 1}
+        )
 
         return True, None
 
