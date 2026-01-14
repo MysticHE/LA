@@ -39,6 +39,7 @@ from src.validators.prompt_validator import PromptValidator
 from src.analyzers.content_analyzer import ContentAnalyzer
 from src.analyzers.content_classifier import ContentClassifier
 from src.generators.image_generator.style_recommender import StyleRecommender
+from src.generators.image_generator.prompt_builder import get_prompt_builder
 from src.services.gemini_client import GeminiClient, GeminiAPIError, RateLimitError
 from src.services.audit_logger import get_audit_logger, AuditStatus
 from src.api.gemini_routes import get_gemini_key_storage
@@ -71,51 +72,6 @@ def get_content_classifier() -> ContentClassifier:
 def get_style_recommender() -> StyleRecommender:
     """Get the style recommender instance."""
     return _style_recommender
-
-
-def _build_image_prompt(
-    post_content: str,
-    style: str,
-    analysis_keywords: list[str],
-    visual_elements: list[str],
-) -> str:
-    """Build a prompt for image generation based on content analysis.
-
-    Args:
-        post_content: The LinkedIn post content.
-        style: The image style to use.
-        analysis_keywords: Keywords extracted from content analysis.
-        visual_elements: Suggested visual elements from analysis.
-
-    Returns:
-        A formatted prompt for image generation.
-    """
-    # Truncate post content if very long
-    max_content_len = 500
-    if len(post_content) > max_content_len:
-        post_content = post_content[:max_content_len] + "..."
-
-    # Build the prompt
-    prompt_parts = [
-        f"Create a professional LinkedIn post image in {style} style.",
-        f"The image should visually represent the following content:",
-        f'"{post_content}"',
-    ]
-
-    if analysis_keywords:
-        keywords_str = ", ".join(analysis_keywords[:5])
-        prompt_parts.append(f"Key themes: {keywords_str}")
-
-    if visual_elements:
-        elements_str = ", ".join(visual_elements[:3])
-        prompt_parts.append(f"Include visual elements like: {elements_str}")
-
-    prompt_parts.append(
-        "The image should be clean, professional, and suitable for LinkedIn. "
-        "Use modern design principles with good contrast and readability."
-    )
-
-    return "\n".join(prompt_parts)
 
 
 @router.post("/image", response_model=ImageGenerationResponse)
@@ -196,19 +152,24 @@ async def generate_image(
 
     # Use style override if provided, otherwise use first recommended style
     if image_request.style:
-        selected_style = image_request.style.value
+        selected_style = image_request.style
     else:
-        selected_style = recommendation.styles[0] if recommendation.styles else ImageStyle.MINIMALIST.value
+        selected_style = ImageStyle(recommendation.styles[0]) if recommendation.styles else ImageStyle.MINIMALIST
 
-    # Step 4: Build the prompt
+    # Step 4: Build the prompt using Nano Banana optimized builder
     if image_request.custom_prompt:
         prompt = image_request.custom_prompt
     else:
-        prompt = _build_image_prompt(
-            image_request.post_content,
-            selected_style,
-            analysis.keywords,
-            analysis.suggested_visual_elements,
+        prompt_builder = get_prompt_builder()
+        prompt = prompt_builder.build_prompt(
+            post_content=image_request.post_content,
+            style=selected_style,
+            content_type=classification.content_type,
+            dimensions=image_request.dimensions.value,
+            technologies=analysis.technologies,
+            keywords=analysis.keywords,
+            visual_elements=analysis.suggested_visual_elements,
+            sentiment=analysis.sentiment,
         )
 
     # Step 5: Generate the image
@@ -225,7 +186,7 @@ async def generate_image(
                 session_id=session_id,
                 status=AuditStatus.SUCCESS,
                 dimensions=image_request.dimensions.value,
-                style=selected_style,
+                style=selected_style.value,
                 content_type=classification.content_type.value,
             )
 
@@ -233,7 +194,7 @@ async def generate_image(
                 success=True,
                 image_base64=result.image_base64,
                 content_type=classification.content_type,
-                recommended_style=ImageStyle(selected_style),
+                recommended_style=selected_style,
                 dimensions=image_request.dimensions.value,
                 prompt_used=prompt,
             )
@@ -243,7 +204,7 @@ async def generate_image(
                 session_id=session_id,
                 status=AuditStatus.FAILURE,
                 dimensions=image_request.dimensions.value,
-                style=selected_style,
+                style=selected_style.value,
                 content_type=classification.content_type.value,
                 error_message=result.error or "Failed to generate image",
             )
@@ -253,7 +214,7 @@ async def generate_image(
                 error=result.error or "Failed to generate image",
                 dimensions=image_request.dimensions.value,
                 content_type=classification.content_type,
-                recommended_style=ImageStyle(selected_style),
+                recommended_style=selected_style,
                 prompt_used=prompt,
             )
 
@@ -265,7 +226,7 @@ async def generate_image(
             session_id=session_id,
             status=AuditStatus.FAILURE,
             dimensions=image_request.dimensions.value,
-            style=selected_style,
+            style=selected_style.value,
             content_type=classification.content_type.value,
             error_message="Rate limit exceeded",
             request_metadata={"retry_after": e.retry_after},
@@ -282,7 +243,7 @@ async def generate_image(
             session_id=session_id,
             status=AuditStatus.FAILURE,
             dimensions=image_request.dimensions.value,
-            style=selected_style,
+            style=selected_style.value,
             content_type=classification.content_type.value,
             error_message=e.message,
         )
@@ -293,7 +254,7 @@ async def generate_image(
             error=e.message,
             dimensions=image_request.dimensions.value,
             content_type=classification.content_type,
-            recommended_style=ImageStyle(selected_style),
+            recommended_style=selected_style,
             prompt_used=prompt,
         )
 
