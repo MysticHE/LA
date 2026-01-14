@@ -450,3 +450,58 @@ Started: 2026-01-14T16:54:20.930080
 - Rate limiting is applied at middleware level (20 requests per minute per session)
 
 ---
+
+---
+
+## 2026-01-14 - Iteration 12
+
+### Story: US-SEC-004 - Implement Security Audit Logging
+**Status: PASSED**
+
+#### Changes Made:
+1. Updated `backend/src/services/audit_logger.py`:
+   - Added IMAGE_GENERATION to AuditEventType enum
+   - Added log_image_generation() method with:
+     - Session ID and timestamp tracking
+     - Request metadata (dimensions, style, content_type)
+     - Automatic exclusion of sensitive data (prompts, post content)
+     - API key redaction in all fields
+   - Added query_by_event_type() method for filtering by event type
+
+2. Updated `backend/src/api/image_routes.py`:
+   - Integrated audit logging for all image generation requests
+   - Logs successful generations with metadata
+   - Logs failed generations with error messages
+   - Logs rate limit errors with retry_after
+   - No sensitive data (prompts, post content) in audit logs
+
+3. Created `backend/tests/test_audit_logging.py`:
+   - 44 comprehensive unit tests covering all acceptance criteria
+   - TestKeyConnectDisconnectAudit: 8 tests for key operations
+   - TestImageGenerationAudit: 7 tests for image generation
+   - TestNoSensitiveDataInLogs: 9 tests for data security
+   - TestAuditLogFiltering: 8 tests for query filtering
+   - TestAuditEntrySerialization: 3 tests for JSON serialization
+   - TestGlobalAuditLogger: 2 tests for singleton pattern
+   - TestAuditLoggingIntegration: 3 integration tests
+   - TestAcceptanceCriteria: 4 direct AC tests
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN API key connect/disconnect WHEN action completes THEN audit log created with timestamp and session ID
+- ✅ GIVEN image generation WHEN completed THEN audit log created with request metadata
+- ✅ GIVEN any audit log WHEN written THEN contains no sensitive data (API keys, prompt content)
+- ✅ GIVEN audit logs WHEN queried THEN support filtering by date and session
+- ✅ pytest backend/tests/test_audit_logging.py passes (44 tests)
+
+#### Test Results:
+- All 44 test_audit_logging.py tests pass
+- Full backend test suite: 865 tests pass (no regressions)
+- TypeScript check: passes
+
+#### Notes:
+- Image generation audit logs include dimensions, style, content_type but explicitly exclude prompt content
+- Prompt-related fields (prompt, prompt_used, custom_prompt, post_content, content, text) are filtered out
+- API keys from any provider (OpenAI, Anthropic, Gemini) are redacted using existing logging utilities
+- Query methods support filtering by session, timestamp range, event type, and combinations
+
+---
