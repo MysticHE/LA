@@ -10,13 +10,31 @@ from typing import Any, Optional
 
 
 # Patterns that match common API key formats
-# Matches: sk-... (OpenAI), sk-ant-... (Anthropic), and similar patterns
+# Matches: sk-... (OpenAI), sk-ant-... (Anthropic), AIza... (Google/Gemini), and similar patterns
 API_KEY_PATTERNS = [
     re.compile(r'sk-ant-[a-zA-Z0-9_-]+'),  # Anthropic keys (more specific, match first)
     re.compile(r'sk-[a-zA-Z0-9_-]+'),       # OpenAI and generic sk- keys
+    re.compile(r'AIza[a-zA-Z0-9_-]{35,}'),  # Google/Gemini API keys (start with AIza, 39+ chars total)
 ]
 
 REDACTED = '[REDACTED]'
+
+
+def mask_api_key(api_key: str) -> str:
+    """Mask an API key, showing only the last 4 characters.
+
+    Args:
+        api_key: The API key to mask.
+
+    Returns:
+        Masked key in format ****xxxx where xxxx is last 4 characters.
+        Returns "****" for keys with 4 or fewer characters.
+    """
+    if not api_key:
+        return ""
+    if len(api_key) <= 4:
+        return "****"
+    return "*" * (len(api_key) - 4) + api_key[-4:]
 
 
 def redact_api_keys(text: str) -> str:
