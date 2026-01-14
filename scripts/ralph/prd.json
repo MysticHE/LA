@@ -827,11 +827,11 @@
       ],
       "testStrategy": "Component tests for display, download, and copy functionality",
       "securityCategory": "none",
-      "state": "pending",
-      "passes": false,
+      "state": "passed",
+      "passes": true,
       "retryCount": 0,
       "notes": "",
-      "completedAt": null
+      "completedAt": "2026-01-14T18:30:00Z"
     },
     {
       "id": "US-010",
@@ -860,11 +860,11 @@
       ],
       "testStrategy": "Integration tests for complete workflow from post generation to image generation",
       "securityCategory": "none",
-      "state": "pending",
-      "passes": false,
+      "state": "passed",
+      "passes": true,
       "retryCount": 0,
       "notes": "",
-      "completedAt": null
+      "completedAt": "2026-01-14T18:30:00Z"
     },
     {
       "id": "US-011",
@@ -890,11 +890,11 @@
       ],
       "testStrategy": "Component tests for prompt editing and reset functionality",
       "securityCategory": "validation",
-      "state": "pending",
-      "passes": false,
+      "state": "passed",
+      "passes": true,
       "retryCount": 0,
       "notes": "",
-      "completedAt": null
+      "completedAt": "2026-01-14T18:30:00Z"
     },
     {
       "id": "US-SEC-001",
