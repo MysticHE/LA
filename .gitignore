@@ -35,3 +35,4 @@ npm-debug.log*
 
 # Ralph agent workspace
 scripts/ralph/
+DEPLOYMENT_GUIDE.md
