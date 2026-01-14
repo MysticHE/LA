@@ -524,10 +524,13 @@ function ProviderForm({
           type="submit"
           disabled={isLoading || !consent}
           size="sm"
-          className="h-9 px-4"
+          className="h-9 min-w-[100px]"
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Connecting...
+            </>
           ) : (
             "Connect"
           )}
