@@ -18,6 +18,14 @@ class ImageDimension(str, Enum):
     LARGE_SQUARE = "1200x1200"  # Large square format
 
 
+# Map dimensions to Gemini API aspect ratios
+DIMENSION_TO_ASPECT_RATIO = {
+    "1200x627": "16:9",    # LinkedIn link post (closest to 1.91:1)
+    "1080x1080": "1:1",    # Square
+    "1200x1200": "1:1",    # Large square
+}
+
+
 class GeminiAPIError(Exception):
     """Base exception for Gemini API errors."""
 
@@ -73,28 +81,6 @@ class GeminiClient:
         self._api_key = api_key
         self._timeout = timeout or self.DEFAULT_TIMEOUT
 
-    def _parse_dimensions(self, dimensions: str) -> tuple[int, int]:
-        """Parse dimension string to width and height.
-
-        Args:
-            dimensions: Dimension string like "1200x627".
-
-        Returns:
-            Tuple of (width, height).
-
-        Raises:
-            ValueError: If dimensions are invalid.
-        """
-        valid_dimensions = {d.value for d in ImageDimension}
-        if dimensions not in valid_dimensions:
-            raise ValueError(
-                f"Invalid dimensions '{dimensions}'. "
-                f"Must be one of: {', '.join(valid_dimensions)}"
-            )
-
-        width, height = dimensions.split("x")
-        return int(width), int(height)
-
     async def generate_image(
         self,
         prompt: str,
@@ -115,32 +101,32 @@ class GeminiClient:
             GeminiAPIError: For general API errors.
             RateLimitError: When rate limit is exceeded.
         """
-        try:
-            width, height = self._parse_dimensions(dimensions)
-        except ValueError as e:
+        # Validate dimensions
+        valid_dimensions = {d.value for d in ImageDimension}
+        if dimensions not in valid_dimensions:
             return ImageGenerationResult(
                 success=False,
-                error=str(e)
+                error=f"Invalid dimensions '{dimensions}'. Must be one of: {', '.join(valid_dimensions)}"
             )
 
         # Build the API URL
         model_name = model or self.DEFAULT_MODEL
         url = f"{self.BASE_URL}/models/{model_name}:generateContent"
 
-        # Build request payload with dimension hints in prompt
-        enhanced_prompt = (
-            f"{prompt}\n\n"
-            f"Generate the image with exact dimensions: {width}x{height} pixels."
-        )
+        # Get aspect ratio for the requested dimensions
+        aspect_ratio = DIMENSION_TO_ASPECT_RATIO.get(dimensions, "16:9")
 
         payload = {
             "contents": [{
                 "parts": [{
-                    "text": enhanced_prompt
+                    "text": prompt
                 }]
             }],
             "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"]
+                "responseModalities": ["TEXT", "IMAGE"],
+                "imageConfig": {
+                    "aspectRatio": aspect_ratio
+                }
             }
         }
 
@@ -149,8 +135,10 @@ class GeminiClient:
                 response = await client.post(
                     url,
                     json=payload,
-                    params={"key": self._api_key},
-                    headers={"Content-Type": "application/json"}
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": self._api_key
+                    }
                 )
 
                 # Handle rate limiting
@@ -275,7 +263,7 @@ class GeminiClient:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     url,
-                    params={"key": self._api_key}
+                    headers={"x-goog-api-key": self._api_key}
                 )
 
                 if response.status_code == 200:
