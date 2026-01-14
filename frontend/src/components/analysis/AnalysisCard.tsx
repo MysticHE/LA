@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import { Star, GitFork, Code } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -5,11 +6,24 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAppStore } from "@/store/appStore"
 
 const categoryColors: Record<string, string> = {
-  language: "bg-blue-500/10 text-blue-700 border-blue-200",
-  framework: "bg-purple-500/10 text-purple-700 border-purple-200",
-  library: "bg-green-500/10 text-green-700 border-green-200",
-  tool: "bg-orange-500/10 text-orange-700 border-orange-200",
-  database: "bg-red-500/10 text-red-700 border-red-200",
+  language: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-500/20",
+  framework: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-500/20",
+  library: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-500/20",
+  tool: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-500/20",
+  database: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-500/20",
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } }
 }
 
 export function AnalysisCard() {
@@ -42,86 +56,109 @@ export function AnalysisCard() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <span className="text-2xl">2</span>
-          Project Analysis
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">{analysis.repo_name}</h3>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Star className="h-4 w-4" />
-              {analysis.stars.toLocaleString()}
-            </span>
-            <span className="flex items-center gap-1">
-              <GitFork className="h-4 w-4" />
-              {analysis.forks.toLocaleString()}
-            </span>
-            {analysis.language && (
-              <span className="flex items-center gap-1">
-                <Code className="h-4 w-4" />
-                {analysis.language}
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <Card>
+        <CardHeader>
+          <motion.div variants={itemVariants}>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <span className="text-2xl bg-gradient-to-br from-primary to-primary/60 bg-clip-text text-transparent">2</span>
+              Project Analysis
+            </CardTitle>
+          </motion.div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <motion.div variants={itemVariants} className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">{analysis.repo_name}</h3>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-default">
+                <Star className="h-4 w-4" />
+                {analysis.stars.toLocaleString()}
               </span>
-            )}
-          </div>
-        </div>
-
-        {analysis.description && (
-          <p className="text-muted-foreground">{analysis.description}</p>
-        )}
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-medium mb-3">Tech Stack</h4>
-            <div className="flex flex-wrap gap-2">
-              {analysis.tech_stack.map((tech, i) => (
-                <Badge
-                  key={i}
-                  variant="outline"
-                  className={categoryColors[tech.category] || ""}
-                >
-                  {tech.name}
-                </Badge>
-              ))}
-              {analysis.tech_stack.length === 0 && (
-                <span className="text-sm text-muted-foreground">
-                  No technologies detected
+              <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-default">
+                <GitFork className="h-4 w-4" />
+                {analysis.forks.toLocaleString()}
+              </span>
+              {analysis.language && (
+                <span className="flex items-center gap-1 hover:text-green-500 transition-colors cursor-default">
+                  <Code className="h-4 w-4" />
+                  {analysis.language}
                 </span>
               )}
             </div>
+          </motion.div>
+
+          {analysis.description && (
+            <motion.p variants={itemVariants} className="text-muted-foreground">{analysis.description}</motion.p>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <motion.div variants={itemVariants}>
+              <h4 className="font-medium mb-3">Tech Stack</h4>
+              <motion.div
+                className="flex flex-wrap gap-2"
+                variants={containerVariants}
+              >
+                {analysis.tech_stack.map((tech, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05, duration: 0.2 }}
+                  >
+                    <Badge
+                      variant="outline"
+                      className={`cursor-default transition-all duration-200 ${categoryColors[tech.category] || ""}`}
+                    >
+                      {tech.name}
+                    </Badge>
+                  </motion.div>
+                ))}
+                {analysis.tech_stack.length === 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    No technologies detected
+                  </span>
+                )}
+              </motion.div>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <h4 className="font-medium mb-3">Key Features</h4>
+              <ul className="space-y-1">
+                {analysis.features.slice(0, 5).map((feature, i) => (
+                  <motion.li
+                    key={i}
+                    className="text-sm flex items-start gap-2 hover:text-foreground transition-colors"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1, duration: 0.3 }}
+                  >
+                    <span className="text-primary mt-1">•</span>
+                    <span>{feature.name}</span>
+                  </motion.li>
+                ))}
+                {analysis.features.length === 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    No features detected
+                  </span>
+                )}
+              </ul>
+            </motion.div>
           </div>
 
-          <div>
-            <h4 className="font-medium mb-3">Key Features</h4>
-            <ul className="space-y-1">
-              {analysis.features.slice(0, 5).map((feature, i) => (
-                <li key={i} className="text-sm flex items-start gap-2">
-                  <span className="text-primary mt-1">•</span>
-                  <span>{feature.name}</span>
-                </li>
-              ))}
-              {analysis.features.length === 0 && (
-                <span className="text-sm text-muted-foreground">
-                  No features detected
-                </span>
-              )}
-            </ul>
-          </div>
-        </div>
-
-        {analysis.readme_summary && (
-          <div>
-            <h4 className="font-medium mb-2">Summary</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {analysis.readme_summary}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {analysis.readme_summary && (
+            <motion.div variants={itemVariants}>
+              <h4 className="font-medium mb-2">Summary</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {analysis.readme_summary}
+              </p>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }

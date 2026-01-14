@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Key,
   Loader2,
@@ -354,8 +355,15 @@ export function AIProvidersPanel() {
             )}
           </button>
 
-          {imageGenExpanded && (
-            <div className="pt-2">
+          <AnimatePresence>
+            {imageGenExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="pt-2 overflow-hidden"
+            >
               {geminiAuth.isConnected ? (
                 <ConnectedState
                   provider="gemini"
@@ -378,8 +386,9 @@ export function AIProvidersPanel() {
                   onErrorClear={() => setGeminiError(null)}
                 />
               )}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {/* Divider */}
