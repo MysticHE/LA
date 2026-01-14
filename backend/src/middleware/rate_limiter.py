@@ -267,11 +267,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
         if not is_allowed:
+            import logging
+            logging.warning(f"[RATE LIMIT] Backend blocked {session_id} on {endpoint_type.value} - retry_after={retry_after}s")
             return JSONResponse(
                 status_code=429,
                 content={
                     "detail": "Too many requests. Please try again later.",
-                    "retry_after": retry_after
+                    "retry_after": retry_after,
+                    "source": "backend_rate_limiter"
                 },
                 headers={
                     "Retry-After": str(retry_after),

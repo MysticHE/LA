@@ -259,6 +259,8 @@ async def generate_image(
 
     except RateLimitError as e:
         # Log rate limit error
+        import logging
+        logging.warning(f"[RATE LIMIT] Gemini API blocked request - retry_after={e.retry_after}s")
         audit.log_image_generation(
             session_id=session_id,
             status=AuditStatus.FAILURE,
@@ -271,7 +273,7 @@ async def generate_image(
 
         raise HTTPException(
             status_code=429,
-            detail=e.message,
+            detail=f"{e.message} (Gemini API limit)",
             headers={"Retry-After": str(e.retry_after)}
         )
     except GeminiAPIError as e:
