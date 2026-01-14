@@ -14,6 +14,29 @@ class Sentiment(str, Enum):
     INFORMATIVE = "informative"
 
 
+class ContentType(str, Enum):
+    """LinkedIn content type classification."""
+    TUTORIAL = "tutorial"
+    ANNOUNCEMENT = "announcement"
+    TIPS = "tips"
+    STORY = "story"
+    TECHNICAL = "technical"
+    CAREER = "career"
+
+
+class ClassificationResult(BaseModel):
+    """Result of content type classification."""
+
+    content_type: ContentType = Field(
+        description="The classified content type"
+    )
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence score for the classification (0.0 to 1.0)"
+    )
+
+
 class ContentAnalysis(BaseModel):
     """Result of analyzing LinkedIn post content."""
 
