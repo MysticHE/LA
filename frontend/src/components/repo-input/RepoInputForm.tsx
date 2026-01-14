@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { Search, Loader2, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,23 +74,15 @@ export function RepoInputForm() {
             </div>
             <Button type="submit" disabled={isAnalyzing} className="min-w-[120px]">
               {isAnalyzing ? (
-                <motion.div
-                  className="flex items-center gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Analyzing...
-                </motion.div>
+                </>
               ) : (
-                <motion.div
-                  className="flex items-center gap-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+                <>
                   <Search className="h-4 w-4" />
                   Analyze
-                </motion.div>
+                </>
               )}
             </Button>
           </div>
