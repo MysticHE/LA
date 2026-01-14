@@ -18,6 +18,11 @@
 - Handle AuthenticationError, RateLimitError, PermissionDeniedError, APIConnectionError, BadRequestError
 - Extract retry-after header from RateLimitError response
 
+[PATTERN-003] Pydantic field_validator for input size validation
+- Use len(v.encode("utf-8")) for byte-accurate size checking (handles multi-byte unicode)
+- Strip whitespace before validation to avoid misleading size counts
+- Return None instead of empty string for optional fields
+
 ## ⚠️ Known Pitfalls
 
 <!-- Errors encountered and how to avoid them -->
@@ -47,6 +52,8 @@
 - backend/src/models/schemas.py - Shared schemas (PostStyle, AnalysisResult)
 - backend/src/utils/logging.py - Secure logging with API key redaction
 - backend/src/middleware/request_logging.py - Request logging middleware
+- backend/src/validators/prompt_validator.py - Prompt injection validation
+- backend/src/api/image_routes.py - Image generation endpoints
 
 ## 🧪 Testing Patterns
 
@@ -65,5 +72,5 @@
 
 ---
 
-*Last Updated: 2026-01-14T17:28:09.806555*
-*Patterns Learned: 2 | Pitfalls Documented: 2*
+*Last Updated: 2026-01-14T17:50:28.001148*
+*Patterns Learned: 3 | Pitfalls Documented: 2*

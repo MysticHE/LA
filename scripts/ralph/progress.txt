@@ -146,3 +146,250 @@ Started: 2026-01-14T16:54:20.930080
 - The mask_api_key() function provides consistent masking across the codebase
 
 ---
+
+## 2026-01-14 - Iteration 5
+
+### Story: US-SEC-002 - Implement Input Validation for Image Generation
+**Status: PASSED**
+
+#### Changes Made:
+1. Updated `backend/src/models/image_schemas.py`:
+   - Added size limit constants: MAX_POST_CONTENT_SIZE (10KB), MAX_PROMPT_SIZE (2KB)
+   - Added ImageDimensions enum with valid LinkedIn dimensions: 1200x627, 1080x1080, 1200x1200
+   - Added VALID_DIMENSIONS set for quick validation
+   - Created ImageGenerationRequest model with field validators for size limits
+   - Created ImageGenerationResponse model for API responses
+
+2. Created `backend/src/validators/prompt_validator.py`:
+   - PromptValidator class with strict mode for production use
+   - INJECTION_PATTERNS: 15+ patterns for instruction override, system prompt injection, role manipulation, jailbreak attempts
+   - HARMFUL_CONTENT_PATTERNS: 8+ patterns for violent, explicit, hate, illegal content
+   - ESCAPE_PATTERNS: Control character sanitization
+   - validate() method returns PromptValidationResult with is_valid, sanitized_prompt, error_message, detected_patterns
+
+3. Created `backend/src/api/image_routes.py`:
+   - POST /generate/image - Image generation endpoint with validation
+   - POST /generate/image/validate - Pre-flight validation endpoint
+   - validate_dimension_string() helper function
+
+4. Created `backend/tests/test_input_validation.py`:
+   - 62 comprehensive unit tests covering all acceptance criteria
+   - TestPostContentSizeValidation: 9 tests for 10KB limit
+   - TestCustomPromptSizeValidation: 6 tests for 2KB limit
+   - TestDimensionValidation: 10 tests for valid dimensions
+   - TestMaliciousPromptValidation: 18 tests for injection patterns
+   - TestPydanticSchemaValidation: 9 tests for schema validation
+   - TestValidateEndpoint: 3 tests for API endpoint
+   - TestImageDimensionsEnum: 4 tests for enum values
+   - TestSizeConstants: 2 tests for size limits
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN post content input WHEN exceeds 10KB THEN return 413/422 error
+- ✅ GIVEN custom prompt WHEN exceeds 2KB THEN return 413/422 error
+- ✅ GIVEN dimension parameter WHEN not in [1200x627, 1080x1080, 1200x1200] THEN return 400/422 error
+- ✅ GIVEN malicious prompt patterns WHEN detected THEN sanitize or reject with 400 error
+- ✅ All inputs validated through Pydantic schemas
+- ✅ pytest backend/tests/test_input_validation.py passes (62 tests)
+
+#### Test Results:
+- All 62 test_input_validation.py tests pass
+- Full backend test suite: 654 tests pass
+- TypeScript check: passes
+
+#### Notes:
+- Updated injection patterns to catch "ignore all instructions" (not just "ignore all previous instructions")
+- FastAPI/Pydantic returns 422 for validation errors instead of 413/400, but the validation logic is correct
+- Created new validators/ directory for security-focused validation utilities
+
+---
+
+## 2026-01-14 - Iteration 6
+
+### Story: US-SEC-003 - Implement Secure Session Management
+**Status: PASSED**
+
+#### Changes Made:
+1. Created `backend/src/services/session_service.py`:
+   - SessionService class for secure session management with cookies
+   - CookieConfig dataclass with security defaults: HttpOnly=True, Secure=True, SameSite="strict"
+   - create_session_with_cookie(): Creates session and sets secure cookie
+   - validate_session(): Validates session from request cookie
+   - delete_session_with_cookie(): Deletes session and clears cookie
+   - disconnect(): Handles session disconnect with secure key cleanup
+   - SESSION_COOKIE_NAME and SESSION_COOKIE_MAX_AGE constants (24 hours)
+
+2. Created `backend/tests/test_session_security.py`:
+   - 26 comprehensive unit tests covering all acceptance criteria
+   - TestCookieSecurityFlags: 6 tests for HttpOnly, Secure, SameSite flags
+   - TestSession24HourExpiry: 3 tests for session expiry and key deletion
+   - TestProtectedEndpoint401: 4 tests for 401 unauthorized responses
+   - TestSessionDisconnect: 3 tests for secure key deletion on disconnect
+   - TestSessionServiceIntegration: 4 tests for full flow
+   - TestGlobalSessionService: 2 tests for singleton pattern
+   - TestAcceptanceCriteria: 4 tests directly verifying each AC
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN session cookie WHEN created THEN has HttpOnly, Secure, SameSite=Strict flags
+- ✅ GIVEN session WHEN older than 24 hours THEN automatically expired and API key deleted
+- ✅ GIVEN protected endpoint WHEN no valid session THEN return 401 Unauthorized
+- ✅ GIVEN session disconnect WHEN triggered THEN encrypted API key securely deleted
+- ✅ pytest backend/tests/test_session_security.py passes (26 tests)
+
+#### Test Results:
+- All 26 test_session_security.py tests pass
+- Full backend test suite: 680 tests pass
+- TypeScript check: passes
+
+#### Notes:
+- Leverages existing SessionManager and CleanupTask for session lifecycle
+- CookieConfig includes secure_mode parameter to disable Secure flag for local development
+- Session middleware already handles 401 for expired sessions via X-Session-ID header
+
+---
+
+## 2026-01-14 - Iteration 7
+
+### Story: US-004 - Implement Gemini Auth Backend
+**Status: PASSED**
+
+#### Changes Made:
+1. Created `backend/src/models/gemini_schemas.py`:
+   - GeminiAuthRequest model with API key validation
+   - GeminiAuthResponse model with connected, masked_key, error fields
+
+2. Created `backend/src/api/gemini_routes.py`:
+   - Router with prefix `/auth/gemini`
+   - POST `/connect` - Validates and stores Gemini API key
+   - GET `/status` - Returns connection status with masked key
+   - POST `/disconnect` - Removes stored API key
+   - validate_gemini_api_key() using google.generativeai SDK
+
+3. Updated `backend/src/api/main.py`:
+   - Added gemini_router import and registration
+   - Added Gemini key storage to cleanup task
+
+4. Updated `backend/requirements.txt`:
+   - Added google-generativeai>=0.8.0
+
+5. Created `backend/tests/test_gemini_routes.py`:
+   - 31 comprehensive tests covering all acceptance criteria
+   - TestConnectEndpoint: 10 tests for connect flow
+   - TestValidateGeminiApiKey: 6 tests for validation
+   - TestIntegration: 2 tests for full flow
+   - TestStatusEndpoint: 5 tests for status endpoint
+   - TestDisconnectEndpoint: 5 tests for disconnect flow
+   - TestGeminiKeyIsolation: 3 tests for provider isolation
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN valid Gemini API key WHEN POST /api/auth/gemini/connect is called THEN return success with masked key
+- ✅ GIVEN invalid Gemini API key WHEN connect attempted THEN return 400 with validation error message
+- ✅ GIVEN connected session WHEN GET /api/auth/gemini/status is called THEN return connected=true with masked key
+- ✅ GIVEN connected session WHEN POST /api/auth/gemini/disconnect is called THEN key is removed and status shows disconnected
+- ✅ API key is encrypted using existing encryption_service.py (via KeyStorageService)
+- ✅ pytest backend/tests/test_gemini_routes.py passes (31 tests)
+
+#### Test Results:
+- All 31 test_gemini_routes.py tests pass
+- Full backend test suite: 711 tests pass
+- TypeScript check: passes
+
+#### Notes:
+- Followed exact patterns from claude_routes.py and openai_routes.py
+- Gemini SDK import at module level for proper mocking
+- Mocks validation function at `src.api.gemini_routes.validate_gemini_api_key`
+
+---
+
+## 2026-01-14 - Iteration 8
+
+### Story: US-005 - Create Nano Banana Client
+**Status: PASSED**
+
+#### Changes Made:
+1. Created `backend/src/services/gemini_client.py`:
+   - GeminiClient class for async image generation via Gemini API
+   - Uses httpx for async HTTP requests (per acceptance criteria)
+   - generate_image() returns ImageGenerationResult with base64 encoded image data
+   - ImageDimension enum: 1200x627 (LINK_POST), 1080x1080 (SQUARE), 1200x1200 (LARGE_SQUARE)
+   - GeminiAPIError exception with user-friendly messages and status_code
+   - RateLimitError exception with retry_after value (extracts from headers, defaults to 60)
+   - validate_key() method for API key validation
+   - _extract_image_from_response() helper for parsing Gemini API response
+
+2. Created `backend/tests/test_gemini_client.py`:
+   - 32 comprehensive tests covering all acceptance criteria
+   - TestGeminiClientGenerateImage: 16 tests for generate_image()
+     - Success cases for all 3 dimensions
+     - Error handling: 401, 403, 400, 429, 500, timeout, connection error
+     - Rate limit retry-after extraction
+     - Empty/missing candidates handling
+     - Custom model support
+   - TestGeminiClientValidateKey: 6 tests for validate_key()
+   - TestImageGenerationResult: 3 tests for dataclass
+   - TestGeminiAPIError: 2 tests for exception
+   - TestRateLimitError: 2 tests for exception
+   - TestImageDimension: 3 tests for enum values
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN valid API key and prompt WHEN generate_image() is called THEN return base64 encoded image data
+- ✅ GIVEN dimension parameter WHEN generating THEN request specifies exact dimensions (1200x627, 1080x1080, or 1200x1200)
+- ✅ GIVEN API error WHEN generation fails THEN raise GeminiAPIError with user-friendly message
+- ✅ GIVEN rate limit response WHEN received THEN raise RateLimitError with retry_after value
+- ✅ Client uses httpx for async HTTP requests
+- ✅ pytest backend/tests/test_gemini_client.py passes (32 tests)
+
+#### Test Results:
+- All 32 test_gemini_client.py tests pass
+- Full backend test suite: 743 tests pass (no regressions)
+
+#### Notes:
+- Used AsyncMock for httpx.AsyncClient mocking pattern
+- Dimensions are included in the prompt text to guide Gemini API
+- API key is passed as query parameter per Gemini API conventions
+- Model defaults to "gemini-2.0-flash-exp-image-generation" for image generation
+
+---
+
+## 2026-01-14 - Iteration 9
+
+### Story: US-SEC-005 - Implement Error Handling Without Data Leakage
+**Status: PASSED**
+
+#### Changes Made:
+1. Updated `backend/src/api/error_handlers.py`:
+   - Added `generate_correlation_id()` function using UUID4
+   - Added Gemini API key pattern to SENSITIVE_PATTERNS: `AIza[A-Za-z0-9_-]{35,}`
+   - Updated `create_safe_error_response()` to include correlation_id for 5xx errors
+   - Added correlation_id to HTTP exception and generic exception handlers
+   - Created `sanitize_gemini_error()` function for Gemini API error sanitization
+   - Handles authentication, rate limit, quota, permission, connection, and invalid request errors
+
+2. Created `backend/tests/test_error_handling.py`:
+   - 53 comprehensive tests covering all acceptance criteria
+   - TestNoStackTracesInResponse: 5 tests for AC1 (no stack traces in responses)
+   - TestNoGeminiApiKeyInErrors: 15 tests for AC2 (no Gemini API keys exposed)
+   - TestGeneric500WithCorrelationId: 10 tests for AC3 (generic 500 with correlation ID)
+   - TestValidationErrorsWithoutPaths: 12 tests for AC4 (validation errors without paths)
+   - TestSecurityReview: 6 comprehensive security tests
+   - TestErrorHandlerIntegration: 5 integration tests
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN any API error WHEN response generated THEN no stack traces in response body
+- ✅ GIVEN Gemini API error WHEN occurring THEN no API key in error message
+- ✅ GIVEN internal error WHEN occurring THEN return generic 500 message with correlation ID
+- ✅ GIVEN validation error WHEN occurring THEN return helpful message without internal paths
+- ✅ pytest backend/tests/test_error_handling.py passes (53 tests)
+
+#### Test Results:
+- All 53 test_error_handling.py tests pass
+- All 48 test_error_handlers.py tests pass (existing tests)
+- Full backend test suite: 796 tests pass (no regressions)
+- TypeScript check: passes
+
+#### Notes:
+- Correlation IDs are UUID4 format for debugging without exposing internals
+- 5xx errors always include correlation_id in response
+- Gemini API key pattern follows Google API key format (AIza prefix)
+- All API provider errors (OpenAI, Anthropic, Gemini) sanitized consistently
+
+---

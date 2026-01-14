@@ -8,6 +8,7 @@ This module provides centralized error handling that:
 """
 
 import re
+import uuid
 import logging
 from typing import Any, Optional
 
@@ -19,11 +20,23 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
 
+
+def generate_correlation_id() -> str:
+    """Generate a unique correlation ID for error tracking.
+
+    Returns:
+        A unique correlation ID string.
+    """
+    return str(uuid.uuid4())
+
 # Patterns that should never appear in error responses
 SENSITIVE_PATTERNS = [
-    # API keys
+    # API keys - OpenAI
     r'sk-[A-Za-z0-9]{20,}',
+    # API keys - Anthropic
     r'sk-ant-[A-Za-z0-9\-]{20,}',
+    # API keys - Google/Gemini (AIza prefix)
+    r'AIza[A-Za-z0-9_-]{35,}',
     # File paths
     r'[A-Za-z]:\\[^"\']+',  # Windows paths
     r'/(?:home|Users|var|tmp|etc)/[^\s"\']+',  # Unix paths
@@ -84,7 +97,9 @@ def is_safe_error_detail(detail: Any) -> bool:
 def create_safe_error_response(
     status_code: int,
     detail: Optional[str] = None,
-    default_message: Optional[str] = None
+    default_message: Optional[str] = None,
+    include_correlation_id: bool = False,
+    correlation_id: Optional[str] = None
 ) -> dict:
     """Create a safe error response that doesn't leak sensitive info.
 
@@ -92,6 +107,8 @@ def create_safe_error_response(
         status_code: HTTP status code.
         detail: Original error detail (will be sanitized).
         default_message: Default message if detail is unsafe.
+        include_correlation_id: Whether to include a correlation ID.
+        correlation_id: Optional pre-generated correlation ID.
 
     Returns:
         Safe error response dictionary.
@@ -104,21 +121,31 @@ def create_safe_error_response(
         504: "Gateway timeout. Please try again later.",
     }
 
-    # For 5xx errors, always use generic message
+    response: dict = {}
+
+    # For 5xx errors, always use generic message with correlation ID
     if status_code >= 500:
-        return {
-            "detail": GENERIC_MESSAGES.get(status_code, GENERIC_MESSAGES[500])
-        }
+        response["detail"] = GENERIC_MESSAGES.get(status_code, GENERIC_MESSAGES[500])
+        # Always include correlation ID for server errors
+        response["correlation_id"] = correlation_id or generate_correlation_id()
+        return response
 
     # For client errors, sanitize the detail
     if detail:
         sanitized = sanitize_error_message(str(detail))
         # If sanitization changed the message significantly (redacted content), use default
         if '[REDACTED]' in sanitized:
-            return {"detail": default_message or "An error occurred processing your request."}
-        return {"detail": sanitized}
+            response["detail"] = default_message or "An error occurred processing your request."
+        else:
+            response["detail"] = sanitized
+    else:
+        response["detail"] = default_message or "An error occurred."
 
-    return {"detail": default_message or "An error occurred."}
+    # Optionally include correlation ID for client errors
+    if include_correlation_id:
+        response["correlation_id"] = correlation_id or generate_correlation_id()
+
+    return response
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -131,10 +158,14 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         """Handle HTTP exceptions with secure responses."""
+        # Generate correlation ID for tracking
+        correlation_id = generate_correlation_id()
+
         response = create_safe_error_response(
             status_code=exc.status_code,
             detail=exc.detail,
-            default_message="Request failed."
+            default_message="Request failed.",
+            correlation_id=correlation_id
         )
 
         # Preserve headers if present (e.g., Retry-After)
@@ -142,7 +173,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
         # Log the original error for debugging (will be redacted by logging filter)
         if exc.status_code >= 500:
-            logger.error(f"HTTP {exc.status_code}: {exc.detail}")
+            logger.error(f"HTTP {exc.status_code} [correlation_id={correlation_id}]: {exc.detail}")
 
         return JSONResponse(
             status_code=exc.status_code,
@@ -184,13 +215,17 @@ def register_error_handlers(app: FastAPI) -> None:
 
         NEVER expose the actual exception message to users.
         """
+        # Generate correlation ID for tracking
+        correlation_id = generate_correlation_id()
+
         # Log the actual error for debugging (will be redacted by logging filter)
-        logger.exception(f"Unhandled exception: {type(exc).__name__}")
+        logger.exception(f"Unhandled exception [correlation_id={correlation_id}]: {type(exc).__name__}")
 
         return JSONResponse(
             status_code=500,
             content={
-                "detail": "An internal server error occurred. Please try again later."
+                "detail": "An internal server error occurred. Please try again later.",
+                "correlation_id": correlation_id
             }
         )
 
@@ -268,6 +303,56 @@ def sanitize_anthropic_error(error_message: str) -> str:
 
     if "connection" in error_lower or "network" in error_lower:
         return SAFE_ERROR_PATTERNS["connection"]
+
+    # Default: generic safe message
+    return "Failed to process request. Please try again."
+
+
+def sanitize_gemini_error(error_message: str) -> str:
+    """Sanitize Gemini (Google) API error messages for safe exposure.
+
+    Ensures no API keys or sensitive details are exposed in error messages.
+
+    Args:
+        error_message: The original Gemini error message.
+
+    Returns:
+        Safe error message.
+    """
+    # Known safe error patterns to pass through
+    SAFE_ERROR_PATTERNS = {
+        "authentication": "Invalid API key. Please reconnect with a valid Gemini API key.",
+        "rate_limit": "Rate limit exceeded. Please try again later.",
+        "permission": "API key does not have permission to perform this action.",
+        "connection": "Could not connect to Gemini API. Please check your network connection.",
+        "quota": "API quota exceeded. Please check your Gemini API billing settings.",
+        "invalid_request": "Invalid request to Gemini API. Please try again.",
+    }
+
+    error_lower = error_message.lower() if error_message else ""
+
+    # First, ensure no API key patterns are in the error message
+    # Gemini keys start with "AIza"
+    if re.search(r'AIza[A-Za-z0-9_-]{35,}', error_message or ''):
+        return "Failed to process request. Please try again."
+
+    if "authentication" in error_lower or "invalid api key" in error_lower or "401" in error_lower:
+        return SAFE_ERROR_PATTERNS["authentication"]
+
+    if "rate limit" in error_lower or "rate_limit" in error_lower or "429" in error_lower:
+        return SAFE_ERROR_PATTERNS["rate_limit"]
+
+    if "quota" in error_lower or "billing" in error_lower:
+        return SAFE_ERROR_PATTERNS["quota"]
+
+    if "permission" in error_lower or "forbidden" in error_lower or "403" in error_lower:
+        return SAFE_ERROR_PATTERNS["permission"]
+
+    if "connection" in error_lower or "network" in error_lower:
+        return SAFE_ERROR_PATTERNS["connection"]
+
+    if "invalid" in error_lower or "400" in error_lower:
+        return SAFE_ERROR_PATTERNS["invalid_request"]
 
     # Default: generic safe message
     return "Failed to process request. Please try again."
