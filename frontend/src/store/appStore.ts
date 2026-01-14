@@ -34,6 +34,21 @@ interface OpenAIAuthActions {
   disconnectOpenAI: () => void
 }
 
+// Gemini Auth Slice
+interface GeminiAuthState {
+  isConnected: boolean
+  maskedKey: string | null
+  isLoading: boolean
+  error: string | null
+}
+
+interface GeminiAuthActions {
+  setGeminiConnected: (connected: boolean, maskedKey?: string | null) => void
+  setGeminiLoading: (loading: boolean) => void
+  setGeminiError: (error: string | null) => void
+  disconnectGemini: () => void
+}
+
 // Main App State
 interface AppState {
   repoUrl: string
@@ -49,6 +64,9 @@ interface AppState {
 
   // OpenAI Auth
   openaiAuth: OpenAIAuthState
+
+  // Gemini Auth
+  geminiAuth: GeminiAuthState
 
   // Provider Selection
   selectedProvider: AIProvider | null
@@ -74,6 +92,12 @@ interface AppState {
   setOpenAIError: OpenAIAuthActions["setOpenAIError"]
   disconnectOpenAI: OpenAIAuthActions["disconnectOpenAI"]
 
+  // Gemini Auth Actions
+  setGeminiConnected: GeminiAuthActions["setGeminiConnected"]
+  setGeminiLoading: GeminiAuthActions["setGeminiLoading"]
+  setGeminiError: GeminiAuthActions["setGeminiError"]
+  disconnectGemini: GeminiAuthActions["disconnectGemini"]
+
   // Provider Selection Action
   setSelectedProvider: (provider: AIProvider | null) => void
 }
@@ -86,6 +110,13 @@ const initialClaudeAuthState: ClaudeAuthState = {
 }
 
 const initialOpenAIAuthState: OpenAIAuthState = {
+  isConnected: false,
+  maskedKey: null,
+  isLoading: false,
+  error: null,
+}
+
+const initialGeminiAuthState: GeminiAuthState = {
   isConnected: false,
   maskedKey: null,
   isLoading: false,
@@ -106,6 +137,7 @@ const initialState = {
   error: null,
   claudeAuth: initialClaudeAuthState,
   openaiAuth: initialOpenAIAuthState,
+  geminiAuth: initialGeminiAuthState,
   selectedProvider: null as AIProvider | null,
 }
 
@@ -188,6 +220,38 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       openaiAuth: {
         ...initialOpenAIAuthState,
+      },
+    }),
+
+  // Gemini Auth Actions
+  setGeminiConnected: (connected, maskedKey = null) =>
+    set((state) => ({
+      geminiAuth: {
+        ...state.geminiAuth,
+        isConnected: connected,
+        maskedKey: connected ? maskedKey : null,
+        error: null,
+      },
+    })),
+  setGeminiLoading: (loading) =>
+    set((state) => ({
+      geminiAuth: {
+        ...state.geminiAuth,
+        isLoading: loading,
+      },
+    })),
+  setGeminiError: (error) =>
+    set((state) => ({
+      geminiAuth: {
+        ...state.geminiAuth,
+        error,
+        isLoading: false,
+      },
+    })),
+  disconnectGemini: () =>
+    set({
+      geminiAuth: {
+        ...initialGeminiAuthState,
       },
     }),
 

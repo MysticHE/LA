@@ -171,6 +171,18 @@ export interface OpenAIStatusResponse {
   masked_key: string | null
 }
 
+// Gemini Auth Types
+export interface GeminiAuthResponse {
+  connected: boolean
+  masked_key: string | null
+  error?: string
+}
+
+export interface GeminiStatusResponse {
+  connected: boolean
+  masked_key: string | null
+}
+
 // AI Provider Type
 export type AIProvider = 'claude' | 'openai'
 
@@ -311,6 +323,62 @@ export const api = {
 
   async disconnectOpenAI(): Promise<OpenAIAuthResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/auth/openai/disconnect`, {
+      method: "POST",
+      headers: {
+        "X-Session-ID": getSessionId(),
+      },
+    })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: true, // Keep connected on error
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
+    return response.json()
+  },
+
+  // Gemini Auth API
+  async connectGemini(apiKey: string): Promise<GeminiAuthResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/gemini/connect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-ID": getSessionId(),
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    })
+
+    // Handle error responses with user-friendly messages
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        connected: false,
+        masked_key: null,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
+    return response.json()
+  },
+
+  async getGeminiStatus(): Promise<GeminiStatusResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/gemini/status`, {
+      headers: {
+        "X-Session-ID": getSessionId(),
+      },
+    })
+    return response.json()
+  },
+
+  async disconnectGemini(): Promise<GeminiAuthResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/auth/gemini/disconnect`, {
       method: "POST",
       headers: {
         "X-Session-ID": getSessionId(),
