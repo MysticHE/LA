@@ -558,3 +558,54 @@ Started: 2026-01-14T16:54:20.930080
 - Added GeminiConnectionStatus component for complete connected state management
 
 ---
+
+## 2026-01-14 - Iteration 14
+
+### Story: US-008 - Create Image Generation Panel
+**Status: PASSED**
+
+#### Changes Made:
+1. Created `frontend/src/components/posts/ImageGenerationPanel.tsx`:
+   - 12 image styles: infographic, minimalist, conceptual, abstract, photorealistic, illustrated, diagram, gradient, flat_design, isometric, tech_themed, professional
+   - 3 LinkedIn-optimized dimensions: 1200x627 (Link Post), 1080x1080 (Square), 1200x1200 (Large Square)
+   - Style selection with recommended styles tracking
+   - Dimension selector with visual preview
+   - Generate button with loading state
+   - Cancel button during generation (with AbortController)
+   - Rate limit countdown with retry functionality
+   - Error display with dismiss option
+   - Generated image preview
+   - Requires Gemini connection (shows connect prompt if not connected)
+
+2. Created `frontend/src/components/posts/index.ts`:
+   - Barrel file exporting PostCard, GeneratedContentPreview, AIPostGenerator, ImageGenerationPanel
+
+3. Updated `frontend/src/lib/api.ts`:
+   - Added ImageGenerationRequest interface
+   - Added ImageGenerationResponse interface
+   - Added generateImage() API function with:
+     - 120 second timeout for image generation
+     - Rate limit handling with retry_after
+     - 401 handling for missing Gemini connection
+     - Error response sanitization
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN ImageGenerationPanel component WHEN post is generated THEN show recommended styles and dimension selector
+- ✅ GIVEN style options WHEN user selects different style THEN update UI and store selection
+- ✅ GIVEN dimension selector WHEN user selects THEN show preview of dimensions (1200x627, 1080x1080, 1200x1200)
+- ✅ GIVEN generate button WHEN clicked THEN show loading state and call image generation API
+- ✅ GIVEN generation in progress WHEN waiting THEN show spinner with cancel option
+- ✅ npm run typecheck passes (npx tsc --noEmit)
+- ✅ Component renders without errors (npm run build succeeds)
+
+#### Test Results:
+- TypeScript check: passes
+- Frontend builds successfully
+
+#### Notes:
+- Component manages its own state for style selection, dimensions, and generation progress
+- Uses useCountdown hook for rate limit countdown (same pattern as AIPostGenerator)
+- Image preview shows base64 image data from API response
+- Cancel functionality uses AbortController to abort fetch request
+
+---
