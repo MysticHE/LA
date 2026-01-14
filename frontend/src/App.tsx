@@ -4,9 +4,7 @@ import { RepoInputForm } from "@/components/repo-input/RepoInputForm"
 import { AnalysisCard } from "@/components/analysis/AnalysisCard"
 import { PostCard } from "@/components/posts/PostCard"
 import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
-import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
-import { OpenAIConnectionStatus } from "@/components/openai-auth/OpenAIConnectionStatus"
-import { GeminiConnectionStatus } from "@/components/gemini-auth/GeminiConnectionStatus"
+import { AIProvidersPanel } from "@/components/providers/AIProvidersPanel"
 import { TermsModal } from "@/components/legal/TermsModal"
 import { PrivacyModal } from "@/components/legal/PrivacyModal"
 import { useAppStore } from "@/store/appStore"
@@ -30,24 +28,8 @@ function App() {
             </p>
           </div>
 
-          {/* AI Provider Connections - Always visible for easy access */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">AI Providers</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Anthropic Claude</p>
-                <ClaudeConnectionStatus />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">OpenAI GPT</p>
-                <OpenAIConnectionStatus />
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-sm text-muted-foreground mb-2">Google Gemini (Image Generation)</p>
-                <GeminiConnectionStatus />
-              </div>
-            </div>
-          </div>
+          {/* AI Provider Connections */}
+          <AIProvidersPanel />
 
           <RepoInputForm />
           <AnalysisCard />
