@@ -32,3 +32,6 @@ tmpclaude-*
 # Logs
 *.log
 npm-debug.log*
+
+# Ralph agent workspace
+scripts/ralph/
