@@ -9,6 +9,7 @@ from src.api.claude_routes import router as claude_router, get_key_storage as ge
 from src.api.generate_routes import router as generate_router
 from src.api.openai_routes import router as openai_router, get_openai_key_storage
 from src.api.gemini_routes import router as gemini_router, get_gemini_key_storage
+from src.api.image_routes import router as image_router
 from src.api.error_handlers import register_error_handlers
 from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
 from src.middleware.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
@@ -92,6 +93,7 @@ app.include_router(claude_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(openai_router, prefix="/api")
 app.include_router(gemini_router, prefix="/api")
+app.include_router(image_router, prefix="/api")
 
 
 @app.get("/")

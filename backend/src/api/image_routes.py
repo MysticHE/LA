@@ -12,6 +12,9 @@ Dimension validation:
 
 Prompt security:
 - Malicious pattern detection and rejection (400 Bad Request)
+
+Rate limiting:
+- 20 requests per minute per session (applied via middleware)
 """
 
 from fastapi import APIRouter, HTTPException, Header, Request
@@ -23,22 +26,91 @@ from src.models.image_schemas import (
     ImageGenerationResponse,
     ImageDimensions,
     ImageStyle,
+    ContentType,
     MAX_POST_CONTENT_SIZE,
     MAX_PROMPT_SIZE,
     VALID_DIMENSIONS,
 )
 from src.validators.prompt_validator import PromptValidator
+from src.analyzers.content_analyzer import ContentAnalyzer
+from src.analyzers.content_classifier import ContentClassifier
+from src.generators.image_generator.style_recommender import StyleRecommender
+from src.services.gemini_client import GeminiClient, GeminiAPIError, RateLimitError
+from src.api.gemini_routes import get_gemini_key_storage
 
 # Create router for image generation endpoints
 router = APIRouter(prefix="/generate", tags=["image-generation"])
 
-# Global prompt validator instance
+# Global service instances
 _prompt_validator = PromptValidator(strict_mode=True)
+_content_analyzer = ContentAnalyzer()
+_content_classifier = ContentClassifier()
+_style_recommender = StyleRecommender()
 
 
 def get_prompt_validator() -> PromptValidator:
     """Get the prompt validator instance."""
     return _prompt_validator
+
+
+def get_content_analyzer() -> ContentAnalyzer:
+    """Get the content analyzer instance."""
+    return _content_analyzer
+
+
+def get_content_classifier() -> ContentClassifier:
+    """Get the content classifier instance."""
+    return _content_classifier
+
+
+def get_style_recommender() -> StyleRecommender:
+    """Get the style recommender instance."""
+    return _style_recommender
+
+
+def _build_image_prompt(
+    post_content: str,
+    style: str,
+    analysis_keywords: list[str],
+    visual_elements: list[str],
+) -> str:
+    """Build a prompt for image generation based on content analysis.
+
+    Args:
+        post_content: The LinkedIn post content.
+        style: The image style to use.
+        analysis_keywords: Keywords extracted from content analysis.
+        visual_elements: Suggested visual elements from analysis.
+
+    Returns:
+        A formatted prompt for image generation.
+    """
+    # Truncate post content if very long
+    max_content_len = 500
+    if len(post_content) > max_content_len:
+        post_content = post_content[:max_content_len] + "..."
+
+    # Build the prompt
+    prompt_parts = [
+        f"Create a professional LinkedIn post image in {style} style.",
+        f"The image should visually represent the following content:",
+        f'"{post_content}"',
+    ]
+
+    if analysis_keywords:
+        keywords_str = ", ".join(analysis_keywords[:5])
+        prompt_parts.append(f"Key themes: {keywords_str}")
+
+    if visual_elements:
+        elements_str = ", ".join(visual_elements[:3])
+        prompt_parts.append(f"Include visual elements like: {elements_str}")
+
+    prompt_parts.append(
+        "The image should be clean, professional, and suitable for LinkedIn. "
+        "Use modern design principles with good contrast and readability."
+    )
+
+    return "\n".join(prompt_parts)
 
 
 @router.post("/image", response_model=ImageGenerationResponse)
@@ -55,6 +127,14 @@ async def generate_image(
     - Dimensions (must be valid LinkedIn dimensions)
     - Prompt safety (no malicious patterns)
 
+    Flow:
+    1. Validate session and Gemini API key connection
+    2. Analyze post content (themes, technologies, sentiment)
+    3. Classify content type
+    4. Recommend image style (unless override provided)
+    5. Generate image via Gemini API
+    6. Return image with metadata
+
     Args:
         request: The FastAPI request object.
         image_request: The image generation request with validated inputs.
@@ -64,9 +144,18 @@ async def generate_image(
         ImageGenerationResponse with generated image or error.
 
     Raises:
-        HTTPException: 400 for invalid inputs, 401 for auth issues.
+        HTTPException: 400 for invalid inputs, 401 for auth issues, 429 for rate limit.
     """
     session_id = x_session_id or "default"
+    gemini_storage = get_gemini_key_storage()
+
+    # Check Gemini API key connection
+    api_key = gemini_storage.retrieve(session_id)
+    if not api_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Not connected to Gemini. Please connect your Gemini API key first."
+        )
 
     # Additional custom prompt validation for malicious patterns
     if image_request.custom_prompt:
@@ -79,13 +168,85 @@ async def generate_image(
                 detail=validation_result.error_message or "Invalid prompt"
             )
 
-    # TODO: Implement actual image generation with Gemini client
-    # For now, return a placeholder response indicating the request was validated
-    return ImageGenerationResponse(
-        success=False,
-        error="Image generation service not yet implemented",
-        dimensions=image_request.dimensions.value
+    # Step 1: Analyze the post content
+    analyzer = get_content_analyzer()
+    try:
+        analysis = analyzer.analyze(image_request.post_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Step 2: Classify the content type
+    classifier = get_content_classifier()
+    classification = classifier.classify(analysis, image_request.post_content)
+
+    # Step 3: Get style recommendation (or use override)
+    recommender = get_style_recommender()
+    recommendation = recommender.recommend(
+        classification.content_type,
+        analysis.technologies,
+        analysis
     )
+
+    # Use style override if provided, otherwise use first recommended style
+    if image_request.style:
+        selected_style = image_request.style.value
+    else:
+        selected_style = recommendation.styles[0] if recommendation.styles else ImageStyle.MINIMALIST.value
+
+    # Step 4: Build the prompt
+    if image_request.custom_prompt:
+        prompt = image_request.custom_prompt
+    else:
+        prompt = _build_image_prompt(
+            image_request.post_content,
+            selected_style,
+            analysis.keywords,
+            analysis.suggested_visual_elements,
+        )
+
+    # Step 5: Generate the image
+    client = GeminiClient(api_key)
+    try:
+        result = await client.generate_image(
+            prompt=prompt,
+            dimensions=image_request.dimensions.value,
+        )
+
+        if result.success:
+            return ImageGenerationResponse(
+                success=True,
+                image_base64=result.image_base64,
+                content_type=classification.content_type,
+                recommended_style=ImageStyle(selected_style),
+                dimensions=image_request.dimensions.value,
+                prompt_used=prompt,
+            )
+        else:
+            return ImageGenerationResponse(
+                success=False,
+                error=result.error or "Failed to generate image",
+                dimensions=image_request.dimensions.value,
+                content_type=classification.content_type,
+                recommended_style=ImageStyle(selected_style),
+                prompt_used=prompt,
+            )
+
+    except RateLimitError as e:
+        raise HTTPException(
+            status_code=429,
+            detail=e.message,
+            headers={"Retry-After": str(e.retry_after)}
+        )
+    except GeminiAPIError as e:
+        # Return as error response, not exception
+        return ImageGenerationResponse(
+            success=False,
+            error=e.message,
+            dimensions=image_request.dimensions.value,
+            content_type=classification.content_type,
+            recommended_style=ImageStyle(selected_style),
+            prompt_used=prompt,
+        )
 
 
 @router.post("/image/validate")
