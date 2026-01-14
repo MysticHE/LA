@@ -1,4 +1,4 @@
-"""Image generation API routes with input validation.
+"""Image generation API routes with input validation and audit logging.
 
 Provides endpoints for generating images for LinkedIn posts with comprehensive
 input validation for security (OWASP A03 compliance).
@@ -15,6 +15,10 @@ Prompt security:
 
 Rate limiting:
 - 20 requests per minute per session (applied via middleware)
+
+Audit logging:
+- All image generation requests are logged with metadata
+- No sensitive data (API keys, prompt content) in audit logs
 """
 
 from fastapi import APIRouter, HTTPException, Header, Request
@@ -36,6 +40,7 @@ from src.analyzers.content_analyzer import ContentAnalyzer
 from src.analyzers.content_classifier import ContentClassifier
 from src.generators.image_generator.style_recommender import StyleRecommender
 from src.services.gemini_client import GeminiClient, GeminiAPIError, RateLimitError
+from src.services.audit_logger import get_audit_logger, AuditStatus
 from src.api.gemini_routes import get_gemini_key_storage
 
 # Create router for image generation endpoints
@@ -133,7 +138,8 @@ async def generate_image(
     3. Classify content type
     4. Recommend image style (unless override provided)
     5. Generate image via Gemini API
-    6. Return image with metadata
+    6. Log audit entry with request metadata
+    7. Return image with metadata
 
     Args:
         request: The FastAPI request object.
@@ -148,6 +154,7 @@ async def generate_image(
     """
     session_id = x_session_id or "default"
     gemini_storage = get_gemini_key_storage()
+    audit = get_audit_logger()
 
     # Check Gemini API key connection
     api_key = gemini_storage.retrieve(session_id)
@@ -213,6 +220,15 @@ async def generate_image(
         )
 
         if result.success:
+            # Log successful image generation (no prompt content in audit log)
+            audit.log_image_generation(
+                session_id=session_id,
+                status=AuditStatus.SUCCESS,
+                dimensions=image_request.dimensions.value,
+                style=selected_style,
+                content_type=classification.content_type.value,
+            )
+
             return ImageGenerationResponse(
                 success=True,
                 image_base64=result.image_base64,
@@ -222,6 +238,16 @@ async def generate_image(
                 prompt_used=prompt,
             )
         else:
+            # Log failed image generation
+            audit.log_image_generation(
+                session_id=session_id,
+                status=AuditStatus.FAILURE,
+                dimensions=image_request.dimensions.value,
+                style=selected_style,
+                content_type=classification.content_type.value,
+                error_message=result.error or "Failed to generate image",
+            )
+
             return ImageGenerationResponse(
                 success=False,
                 error=result.error or "Failed to generate image",
@@ -232,12 +258,33 @@ async def generate_image(
             )
 
     except RateLimitError as e:
+        # Log rate limit error
+        audit.log_image_generation(
+            session_id=session_id,
+            status=AuditStatus.FAILURE,
+            dimensions=image_request.dimensions.value,
+            style=selected_style,
+            content_type=classification.content_type.value,
+            error_message="Rate limit exceeded",
+            request_metadata={"retry_after": e.retry_after},
+        )
+
         raise HTTPException(
             status_code=429,
             detail=e.message,
             headers={"Retry-After": str(e.retry_after)}
         )
     except GeminiAPIError as e:
+        # Log API error
+        audit.log_image_generation(
+            session_id=session_id,
+            status=AuditStatus.FAILURE,
+            dimensions=image_request.dimensions.value,
+            style=selected_style,
+            content_type=classification.content_type.value,
+            error_message=e.message,
+        )
+
         # Return as error response, not exception
         return ImageGenerationResponse(
             success=False,

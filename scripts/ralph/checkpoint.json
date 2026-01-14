@@ -1,19 +1,25 @@
 {
-  "story_id": "US-006",
-  "iteration": 10,
+  "story_id": "US-SEC-004",
+  "iteration": 12,
   "state": "in_progress",
-  "timestamp": "2026-01-14T17:56:53.325813",
+  "timestamp": "2026-01-14T18:05:05.659641",
   "metrics": {
     "session_id": "20260114_165420",
     "start_time": "2026-01-14T16:54:20.929693",
     "end_time": null,
-    "total_iterations": 9,
-    "stories_completed": 9,
+    "total_iterations": 10,
+    "stories_completed": 10,
     "stories_failed": 0,
     "total_retries": 0,
     "errors_encountered": 0,
     "patterns_learned": 0,
-    "errors": [],
+    "errors": [
+      {
+        "iteration": 11,
+        "error": "Command failed with exit code 1 (exit code: 1)\nError output: Check stderr output for details",
+        "timestamp": "2026-01-14T18:05:00.650001"
+      }
+    ],
     "duration_seconds": null
   }
 }

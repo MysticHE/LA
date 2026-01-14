@@ -1,8 +1,9 @@
 """Audit logging service for security-critical operations.
 
 This module provides structured audit logging for key operations like
-API key connect/disconnect, and unauthorized access attempts. All logs
-are guaranteed to never contain actual API keys.
+API key connect/disconnect, image generation, and unauthorized access
+attempts. All logs are guaranteed to never contain actual API keys
+or prompt content.
 """
 
 import json
@@ -20,6 +21,7 @@ class AuditEventType(str, Enum):
     KEY_CONNECT = "key_connect"
     KEY_DISCONNECT = "key_disconnect"
     UNAUTHORIZED_ACCESS = "unauthorized_access"
+    IMAGE_GENERATION = "image_generation"
 
 
 class AuditStatus(str, Enum):
@@ -64,7 +66,7 @@ class AuditLogger:
     """Audit logger for security-critical operations.
 
     All logged data is automatically redacted to ensure API keys
-    never appear in audit logs.
+    and prompt content never appear in audit logs.
 
     Attributes:
         _entries: In-memory storage of audit entries for querying.
@@ -221,6 +223,69 @@ class AuditLogger:
         self._store_and_log(entry)
         return entry
 
+    def log_image_generation(
+        self,
+        session_id: str,
+        status: AuditStatus,
+        dimensions: Optional[str] = None,
+        style: Optional[str] = None,
+        content_type: Optional[str] = None,
+        error_message: Optional[str] = None,
+        request_metadata: Optional[Dict[str, Any]] = None
+    ) -> AuditEntry:
+        """Log an image generation operation.
+
+        This logs the metadata of image generation requests without
+        exposing sensitive data like API keys or prompt content.
+
+        Args:
+            session_id: The session identifier.
+            status: The operation status (success/failure).
+            dimensions: The requested image dimensions (e.g., "1200x627").
+            style: The image style used (e.g., "minimalist").
+            content_type: The detected content type (e.g., "TUTORIAL").
+            error_message: Optional error message if failed.
+            request_metadata: Additional metadata about the request.
+                              Sensitive fields will be redacted.
+                              NOTE: prompt content is explicitly excluded.
+
+        Returns:
+            The created audit entry.
+        """
+        # Build details dict with safe metadata only
+        details: Dict[str, Any] = {}
+
+        if dimensions:
+            details["dimensions"] = dimensions
+        if style:
+            details["style"] = style
+        if content_type:
+            details["content_type"] = content_type
+
+        # Add any additional safe metadata (will be redacted)
+        if request_metadata:
+            # Explicitly exclude prompt-related fields to ensure no content leakage
+            safe_metadata = {
+                k: v for k, v in request_metadata.items()
+                if k.lower() not in {
+                    "prompt", "prompt_used", "custom_prompt",
+                    "post_content", "content", "text"
+                }
+            }
+            details.update(self._redact_details(safe_metadata) or {})
+
+        entry = AuditEntry(
+            event_type=AuditEventType.IMAGE_GENERATION,
+            session_id=self._redact_session_id(session_id),
+            timestamp=self._get_timestamp(),
+            status=status,
+            provider="gemini",  # Currently only Gemini is supported
+            error_message=redact_api_keys(error_message) if error_message else None,
+            details=details if details else None
+        )
+        self._store_and_log(entry)
+        return entry
+
     def query_by_session(self, session_id: str) -> List[AuditEntry]:
         """Query audit entries by session ID.
 
@@ -271,6 +336,20 @@ class AuditLogger:
             e for e in self._entries
             if e.session_id == session_id and start_time <= e.timestamp <= end_time
         ]
+
+    def query_by_event_type(
+        self,
+        event_type: AuditEventType
+    ) -> List[AuditEntry]:
+        """Query audit entries by event type.
+
+        Args:
+            event_type: The event type to filter by.
+
+        Returns:
+            List of matching audit entries.
+        """
+        return [e for e in self._entries if e.event_type == event_type]
 
     def get_all_entries(self) -> List[AuditEntry]:
         """Get all audit entries.
