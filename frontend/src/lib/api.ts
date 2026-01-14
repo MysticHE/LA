@@ -200,6 +200,25 @@ export interface AIGenerateResponse {
   retry_after?: number
 }
 
+// Image Generation Types
+export interface ImageGenerationRequest {
+  postContent: string
+  style?: string
+  dimensions: string
+  customPrompt?: string
+}
+
+export interface ImageGenerationResponse {
+  success: boolean
+  image_base64?: string
+  content_type?: string
+  recommended_style?: string
+  dimensions?: string
+  prompt_used?: string
+  error?: string
+  retry_after?: number
+}
+
 export const api = {
   async analyzeRepo(url: string, token?: string): Promise<ApiResponse<AnalysisResult>> {
     const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -457,6 +476,65 @@ export const api = {
         success: false,
         content: null,
         style: style,
+        error: getUserFriendlyError(errorMessage),
+      }
+    }
+
+    return response.json()
+  },
+
+  // Image Generation API
+  async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    const requestBody: Record<string, unknown> = {
+      post_content: request.postContent,
+      dimensions: request.dimensions,
+    }
+    if (request.style) {
+      requestBody.style = request.style
+    }
+    if (request.customPrompt) {
+      requestBody.custom_prompt = request.customPrompt
+    }
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/generate/image`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-ID": getSessionId(),
+        },
+        body: JSON.stringify(requestBody),
+      },
+      120000 // 120 second timeout for image generation
+    )
+
+    // Handle rate limit with retry_after
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After")
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: getUserFriendlyError(data.detail || "Rate limit exceeded", "RATE_LIMITED"),
+        retry_after: retryAfter ? parseInt(retryAfter, 10) : 60,
+      }
+    }
+
+    // Handle unauthorized (not connected)
+    if (response.status === 401) {
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: data.detail || "Not connected to Gemini. Please connect your API key.",
+      }
+    }
+
+    // Handle other error responses
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      const errorMessage = data.detail || data.error || `Request failed with status ${response.status}`
+      return {
+        success: false,
         error: getUserFriendlyError(errorMessage),
       }
     }
