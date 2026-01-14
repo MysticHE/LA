@@ -8,6 +8,7 @@ from src.api.routes import router
 from src.api.claude_routes import router as claude_router, get_key_storage as get_claude_key_storage
 from src.api.generate_routes import router as generate_router
 from src.api.openai_routes import router as openai_router, get_openai_key_storage
+from src.api.gemini_routes import router as gemini_router, get_gemini_key_storage
 from src.api.error_handlers import register_error_handlers
 from src.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
 from src.middleware.security_headers import SecurityHeadersMiddleware, SecurityHeadersConfig
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
     # Register key storages for cleanup on session expiry
     cleanup_task.add_key_storage(get_claude_key_storage())
     cleanup_task.add_key_storage(get_openai_key_storage())
+    cleanup_task.add_key_storage(get_gemini_key_storage())
 
     # Start the background cleanup task (runs every hour)
     await cleanup_task.start()
@@ -89,6 +91,7 @@ app.include_router(router, prefix="/api")
 app.include_router(claude_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(openai_router, prefix="/api")
+app.include_router(gemini_router, prefix="/api")
 
 
 @app.get("/")
