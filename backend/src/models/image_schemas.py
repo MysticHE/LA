@@ -1,8 +1,13 @@
 """Schemas for image generation and content analysis."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from enum import Enum
+
+
+# Size limits in bytes
+MAX_POST_CONTENT_SIZE = 10 * 1024  # 10KB
+MAX_PROMPT_SIZE = 2 * 1024  # 2KB
 
 
 class ImageStyle(str, Enum):
@@ -91,4 +96,106 @@ class ContentAnalysis(BaseModel):
     suggested_visual_elements: list[str] = Field(
         default_factory=list,
         description="Visual elements that could represent the content"
+    )
+
+
+class ImageDimensions(str, Enum):
+    """LinkedIn-optimized image dimensions."""
+    LINK_POST = "1200x627"  # Standard link post
+    SQUARE = "1080x1080"  # Square format
+    LARGE_SQUARE = "1200x1200"  # Large square format
+
+
+# Valid dimension strings for quick validation
+VALID_DIMENSIONS = {d.value for d in ImageDimensions}
+
+
+class ImageGenerationRequest(BaseModel):
+    """Request model for image generation with validated inputs."""
+
+    post_content: str = Field(
+        ...,
+        min_length=1,
+        description="LinkedIn post content to generate an image for"
+    )
+    custom_prompt: Optional[str] = Field(
+        None,
+        description="Optional custom prompt for image generation"
+    )
+    dimensions: ImageDimensions = Field(
+        default=ImageDimensions.LINK_POST,
+        description="Image dimensions (1200x627, 1080x1080, or 1200x1200)"
+    )
+    style: Optional[ImageStyle] = Field(
+        None,
+        description="Optional image style override"
+    )
+
+    @field_validator("post_content")
+    @classmethod
+    def validate_post_content_size(cls, v: str) -> str:
+        """Validate post content does not exceed maximum size."""
+        if not v or not v.strip():
+            raise ValueError("Post content cannot be empty or whitespace")
+        v = v.strip()
+        # Check size in bytes (UTF-8 encoded)
+        content_size = len(v.encode("utf-8"))
+        if content_size > MAX_POST_CONTENT_SIZE:
+            raise ValueError(
+                f"Post content exceeds maximum size of {MAX_POST_CONTENT_SIZE // 1024}KB"
+            )
+        return v
+
+    @field_validator("custom_prompt")
+    @classmethod
+    def validate_custom_prompt_size(cls, v: Optional[str]) -> Optional[str]:
+        """Validate custom prompt does not exceed maximum size."""
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        # Check size in bytes (UTF-8 encoded)
+        prompt_size = len(v.encode("utf-8"))
+        if prompt_size > MAX_PROMPT_SIZE:
+            raise ValueError(
+                f"Custom prompt exceeds maximum size of {MAX_PROMPT_SIZE // 1024}KB"
+            )
+        return v
+
+
+class ImageGenerationResponse(BaseModel):
+    """Response model for image generation."""
+
+    success: bool = Field(
+        ...,
+        description="Whether image generation was successful"
+    )
+    image_base64: Optional[str] = Field(
+        None,
+        description="Base64-encoded generated image"
+    )
+    content_type: Optional[ContentType] = Field(
+        None,
+        description="Detected content type of the post"
+    )
+    recommended_style: Optional[ImageStyle] = Field(
+        None,
+        description="Recommended image style based on content"
+    )
+    dimensions: Optional[str] = Field(
+        None,
+        description="Dimensions of the generated image"
+    )
+    prompt_used: Optional[str] = Field(
+        None,
+        description="The prompt that was used for image generation"
+    )
+    error: Optional[str] = Field(
+        None,
+        description="Error message if generation failed"
+    )
+    retry_after: Optional[int] = Field(
+        None,
+        description="Seconds to wait before retrying (for rate limit errors)"
     )
