@@ -393,3 +393,60 @@ Started: 2026-01-14T16:54:20.930080
 - All API provider errors (OpenAI, Anthropic, Gemini) sanitized consistently
 
 ---
+
+## 2026-01-14 - Iteration 10
+
+### Story: US-006 - Implement Image Generation Endpoint
+**Status: PASSED**
+
+#### Changes Made:
+1. Updated `backend/src/api/image_routes.py`:
+   - Integrated GeminiClient for image generation
+   - Added authentication check for Gemini API key connection (401 if not connected)
+   - Integrated ContentAnalyzer for post content analysis
+   - Integrated ContentClassifier for content type detection
+   - Integrated StyleRecommender for style recommendations
+   - Support for style override and custom prompts
+   - Built image prompts from analysis results
+   - Proper error handling for GeminiAPIError and RateLimitError
+   - Response includes all required metadata fields
+
+2. Updated `backend/src/api/main.py`:
+   - Registered image_router for the `/api/generate/image` endpoint
+
+3. Created `backend/tests/test_image_generation.py`:
+   - 25 comprehensive tests covering all acceptance criteria
+   - TestImageGenerationEndpoint: 5 tests for core functionality
+   - TestImageGenerationRateLimiting: 1 test for rate limit handling
+   - TestImageGenerationDimensions: 4 tests for dimension validation
+   - TestImageGenerationContentAnalysis: 3 tests for content analysis integration
+   - TestImageGenerationCustomPrompt: 2 tests for custom prompt handling
+   - TestImageGenerationErrorHandling: 2 tests for error responses
+   - TestImageGenerationValidation: 4 tests for input validation
+   - TestImageGenerationIntegration: 3 tests for full flow
+   - TestDefaultSession: 1 test for default session handling
+
+4. Fixed `backend/tests/test_input_validation.py`:
+   - Updated test_api_returns_400_for_malicious_prompt to set up Gemini connection
+
+#### Acceptance Criteria Verification:
+- ✅ GIVEN valid post content and connected Gemini WHEN POST /api/generate/image THEN return image with metadata
+- ✅ GIVEN no Gemini connection WHEN generate called THEN return 401 with connect message
+- ✅ GIVEN post content WHEN generating THEN auto-analyze, classify, and recommend style
+- ✅ GIVEN optional style override WHEN provided THEN use specified style
+- ✅ Response includes: image_base64, content_type, recommended_style, dimensions, prompt_used
+- ✅ Rate limiting applied (20/min) via middleware
+- ✅ pytest backend/tests/test_image_generation.py passes (25 tests)
+
+#### Test Results:
+- All 25 test_image_generation.py tests pass
+- Full backend test suite: 821 tests pass (no regressions)
+- TypeScript check: passes
+
+#### Notes:
+- Image routes share the same Gemini key storage with gemini_routes via get_gemini_key_storage()
+- Content analysis extracts themes, technologies, sentiment, and visual elements
+- Prompt building includes post content summary, key themes, and visual element suggestions
+- Rate limiting is applied at middleware level (20 requests per minute per session)
+
+---
