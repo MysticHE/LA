@@ -6,6 +6,7 @@ import { PostCard } from "@/components/posts/PostCard"
 import { AIPostGenerator } from "@/components/posts/AIPostGenerator"
 import { ClaudeConnectionStatus } from "@/components/claude-auth/ClaudeConnectionStatus"
 import { OpenAIConnectionStatus } from "@/components/openai-auth/OpenAIConnectionStatus"
+import { GeminiConnectionStatus } from "@/components/gemini-auth/GeminiConnectionStatus"
 import { TermsModal } from "@/components/legal/TermsModal"
 import { PrivacyModal } from "@/components/legal/PrivacyModal"
 import { useAppStore } from "@/store/appStore"
@@ -40,6 +41,10 @@ function App() {
               <div>
                 <p className="text-sm text-muted-foreground mb-2">OpenAI GPT</p>
                 <OpenAIConnectionStatus />
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-sm text-muted-foreground mb-2">Google Gemini (Image Generation)</p>
+                <GeminiConnectionStatus />
               </div>
             </div>
           </div>
