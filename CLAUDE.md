@@ -68,12 +68,47 @@ The post is about: [summary]
 
 **Tech Color Palettes**: 30+ technologies with hex codes in `TECH_COLOR_PALETTES`
 
+### Project Insights System
+
+**Files**:
+- `backend/src/models/schemas.py` - `InsightType` enum, `ProjectInsight` model
+- `backend/src/analyzers/insights_analyzer.py` - Pattern detection logic
+- `frontend/src/components/analysis/AnalysisCard.tsx` - Accordion UI display
+- `frontend/src/components/ui/accordion.tsx` - Radix accordion component
+
+**Insight Types**:
+- `strength` - Platform, architecture, monitoring (green)
+- `highlight` - AI, payments, real-time, UX features (blue)
+- `consideration` - Missing auth, database, deployment (amber)
+
+**Detection Categories** (7 total):
+1. Platform & Deployment - Vercel, Netlify, AWS, Docker, Supabase, Firebase
+2. Third-Party Services - Stripe, Auth0, SendGrid, Sentry, Analytics
+3. AI & Machine Learning - OpenAI, Claude, LangChain, Vector DBs
+4. Architecture Patterns - Monorepo, GraphQL, tRPC, Event-driven
+5. User Experience - Real-time, PWA, i18n, Dark Mode, Animations
+6. Data & Storage - PostgreSQL, MongoDB, Redis, S3, PlanetScale
+7. Business Model - SaaS, Multi-tenant, Admin Dashboard, API-first
+
+**Adding New Insight Pattern**:
+Edit `backend/src/analyzers/insights_analyzer.py`:
+```python
+{
+    "patterns": ["package-name", "file-pattern"],
+    "title": "Feature Name",
+    "description": "Reader-friendly description",
+    "icon": "emoji",
+    "type": InsightType.STRENGTH,  # or HIGHLIGHT, CONSIDERATION
+}
+```
+
 ### Content Analysis Pipeline
 
 1. `ContentAnalyzer` - Extracts themes, technologies, keywords, sentiment
 2. `ContentClassifier` - Classifies into: Tutorial, Announcement, Tips, Story, Technical, Career
 3. `StyleRecommender` - Recommends image style based on content type + tech stack
 4. `GeminiPromptBuilder` - Builds optimized prompt from all components
+5. `InsightsAnalyzer` - Detects project strengths, highlights, and considerations
 
 ### AI Providers
 

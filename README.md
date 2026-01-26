@@ -5,6 +5,7 @@ Transform your GitHub projects into engaging LinkedIn posts with AI-powered cont
 ## Features
 
 - **GitHub Repository Analysis**: Extract tech stack, features, and README content
+- **Project Insights**: Auto-detect strengths, highlights, and considerations (AI integrations, deployment platforms, architecture patterns)
 - **Multi-Provider AI Generation**: Generate posts using Claude, OpenAI, or Gemini
 - **AI Image Generation**: Create professional visuals using Gemini 3 Pro Image (Nano Banana Pro)
 - **3 Post Styles**:
@@ -158,6 +159,37 @@ linkedin-content-automation/
 - Rate limiting protects against abuse
 - Security headers (CSP, XSS protection, etc.)
 - No API keys stored on server permanently
+
+## Project Insights
+
+The Project Insights feature automatically analyzes repositories and generates reader-friendly insights categorized into three types:
+
+### Insight Categories
+
+| Category | Color | Description |
+|----------|-------|-------------|
+| **Strengths** | Green | What makes the project well-designed (deployment, architecture, monitoring) |
+| **Highlights** | Blue | Notable integrations and capabilities (AI, payments, real-time features) |
+| **Considerations** | Amber | Areas to note or potential improvements |
+
+### Detection Categories
+
+| Category | Examples |
+|----------|----------|
+| Platform & Deployment | Vercel, Netlify, AWS, Docker, Railway, Supabase, Firebase |
+| Third-Party Services | Stripe, Auth0, Clerk, SendGrid, Twilio, Sentry, Analytics |
+| AI & Machine Learning | OpenAI, Claude, LangChain, Vector DBs, Hugging Face |
+| Architecture Patterns | Monorepo, GraphQL, tRPC, Event-driven, Serverless |
+| User Experience | Real-time, PWA, i18n, Dark Mode, Accessibility, Animations |
+| Data & Storage | PostgreSQL, MongoDB, Redis, S3, PlanetScale |
+| Business Model | SaaS patterns, Multi-tenant, Admin Dashboard, API-first |
+
+### Consideration Detection
+
+Automatically detects potential gaps:
+- No authentication detected
+- No database found
+- No deployment configuration
 
 ## AI Image Generation
 
