@@ -1,9 +1,11 @@
 import { motion } from "framer-motion"
-import { Star, GitFork, Code } from "lucide-react"
+import { Star, GitFork, Code, Sparkles, Zap, Info } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { useAppStore } from "@/store/appStore"
+import type { ProjectInsight, InsightType } from "@/lib/api"
 
 const categoryColors: Record<string, string> = {
   language: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-500/20",
@@ -24,6 +26,52 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } }
+}
+
+const insightTypeConfig: Record<InsightType, { icon: React.ReactNode; label: string; bgClass: string; borderClass: string }> = {
+  strength: {
+    icon: <Sparkles className="h-4 w-4" />,
+    label: "Strengths",
+    bgClass: "bg-green-500/10",
+    borderClass: "border-green-200 dark:border-green-800",
+  },
+  highlight: {
+    icon: <Zap className="h-4 w-4" />,
+    label: "Highlights",
+    bgClass: "bg-blue-500/10",
+    borderClass: "border-blue-200 dark:border-blue-800",
+  },
+  consideration: {
+    icon: <Info className="h-4 w-4" />,
+    label: "Considerations",
+    bgClass: "bg-amber-500/10",
+    borderClass: "border-amber-200 dark:border-amber-800",
+  },
+}
+
+function InsightCard({ insight }: { insight: ProjectInsight }) {
+  const config = insightTypeConfig[insight.type]
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={`flex items-start gap-3 p-3 rounded-lg ${config.bgClass} border ${config.borderClass}`}
+    >
+      <span className="text-lg shrink-0">{insight.icon}</span>
+      <div className="min-w-0">
+        <p className="font-medium text-sm">{insight.title}</p>
+        <p className="text-xs text-muted-foreground">{insight.description}</p>
+      </div>
+    </motion.div>
+  )
+}
+
+function groupInsightsByType(insights: ProjectInsight[]) {
+  return {
+    strengths: insights.filter(i => i.type === "strength"),
+    highlights: insights.filter(i => i.type === "highlight"),
+    considerations: insights.filter(i => i.type === "consideration"),
+  }
 }
 
 export function AnalysisCard() {
@@ -157,8 +205,89 @@ export function AnalysisCard() {
               </p>
             </motion.div>
           )}
+
+          {analysis.insights && analysis.insights.length > 0 && (
+            <motion.div variants={itemVariants}>
+              <h4 className="font-medium mb-3">Project Insights</h4>
+              <ProjectInsightsAccordion insights={analysis.insights} />
+            </motion.div>
+          )}
         </CardContent>
       </Card>
     </motion.div>
+  )
+}
+
+function ProjectInsightsAccordion({ insights }: { insights: ProjectInsight[] }) {
+  const grouped = groupInsightsByType(insights)
+  const defaultOpen: string[] = []
+
+  if (grouped.strengths.length > 0) defaultOpen.push("strengths")
+
+  return (
+    <Accordion type="multiple" defaultValue={defaultOpen} className="w-full">
+      {grouped.strengths.length > 0 && (
+        <AccordionItem value="strengths" className="border-green-200 dark:border-green-800">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+              <Sparkles className="h-4 w-4" />
+              <span className="font-medium">Strengths</span>
+              <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400 text-xs">
+                {grouped.strengths.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2">
+              {grouped.strengths.map((insight, i) => (
+                <InsightCard key={i} insight={insight} />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {grouped.highlights.length > 0 && (
+        <AccordionItem value="highlights" className="border-blue-200 dark:border-blue-800">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+              <Zap className="h-4 w-4" />
+              <span className="font-medium">Highlights</span>
+              <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs">
+                {grouped.highlights.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2">
+              {grouped.highlights.map((insight, i) => (
+                <InsightCard key={i} insight={insight} />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {grouped.considerations.length > 0 && (
+        <AccordionItem value="considerations" className="border-amber-200 dark:border-amber-800">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <Info className="h-4 w-4" />
+              <span className="font-medium">Considerations</span>
+              <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
+                {grouped.considerations.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2">
+              {grouped.considerations.map((insight, i) => (
+                <InsightCard key={i} insight={insight} />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+    </Accordion>
   )
 }

@@ -5,6 +5,7 @@ from github import Github, GithubException
 from src.models.schemas import AnalysisResult, TechStackItem, Feature
 from src.analyzers.code_analyzer import CodeAnalyzer
 from src.analyzers.feature_extractor import FeatureExtractor
+from src.analyzers.insights_analyzer import InsightsAnalyzer
 
 if TYPE_CHECKING:
     from src.services.openai_client import OpenAIClient
@@ -20,6 +21,7 @@ class GitHubAnalyzer:
         self.github = Github(self.token) if self.token else Github()
         self.code_analyzer = CodeAnalyzer()
         self.feature_extractor = FeatureExtractor()
+        self.insights_analyzer = InsightsAnalyzer()
         self.openai_client = openai_client
 
     def _parse_repo_url(self, url: str) -> tuple[str, str]:
@@ -62,6 +64,13 @@ class GitHubAnalyzer:
 
         readme_summary = self._summarize_readme(readme_content)
 
+        insights = self.insights_analyzer.analyze(
+            tech_stack=tech_stack,
+            file_contents=repo_contents,
+            file_structure=file_structure,
+            primary_language=repo.language,
+        )
+
         return AnalysisResult(
             repo_name=repo.name,
             description=repo.description,
@@ -72,6 +81,7 @@ class GitHubAnalyzer:
             features=features,
             readme_summary=readme_summary,
             file_structure=file_structure[:50],
+            insights=insights,
         )
 
     def _get_readme(self, repo) -> Optional[str]:

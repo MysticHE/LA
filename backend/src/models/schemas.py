@@ -3,6 +3,21 @@ from typing import Optional
 from enum import Enum
 
 
+class InsightType(str, Enum):
+    """Type of project insight."""
+    STRENGTH = "strength"
+    CONSIDERATION = "consideration"
+    HIGHLIGHT = "highlight"
+
+
+class ProjectInsight(BaseModel):
+    """A single insight about the project."""
+    type: InsightType
+    title: str
+    description: str
+    icon: str
+
+
 class Provider(str, Enum):
     """Available AI providers for content generation."""
     CLAUDE = "claude"
@@ -40,6 +55,7 @@ class AnalysisResult(BaseModel):
     features: list[Feature]
     readme_summary: Optional[str]
     file_structure: list[str]
+    insights: list[ProjectInsight] = []
 
 
 class GenerateRequest(BaseModel):

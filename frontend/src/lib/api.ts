@@ -117,6 +117,15 @@ export interface Feature {
   description: string
 }
 
+export type InsightType = "strength" | "consideration" | "highlight"
+
+export interface ProjectInsight {
+  type: InsightType
+  title: string
+  description: string
+  icon: string
+}
+
 export interface AnalysisResult {
   repo_name: string
   description: string | null
@@ -127,6 +136,7 @@ export interface AnalysisResult {
   features: Feature[]
   readme_summary: string | null
   file_structure: string[]
+  insights: ProjectInsight[]
 }
 
 export interface GeneratedPrompt {

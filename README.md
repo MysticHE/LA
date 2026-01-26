@@ -173,13 +173,21 @@ Uses **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`) - also known as "Nano
 
 ### Image Styles
 12 professionally designed styles:
-- **Infographic** - Data visualization layouts
-- **Minimalist** - Clean, focused designs
-- **Tech Themed** - Glassmorphism, neon accents
-- **Isometric** - Premium 3D illustrations
-- **Photorealistic** - Cinematic renders
-- **Gradient** - Modern color transitions
-- And 6 more...
+
+| Style | Description | Mood |
+|-------|-------------|------|
+| **Infographic** | Clean data visualization layouts | Informative, educational |
+| **Minimalist** | Ample negative space, focused | Elegant, sophisticated |
+| **Conceptual** | Metaphorical imagery, creative | Thought-provoking |
+| **Abstract** | Flowing shapes, fluid gradients | Innovative, artistic |
+| **Photorealistic** | 3D rendering, cinematic lighting | Authentic, professional |
+| **Illustrated** | Stylized elements, artistic texture | Friendly, approachable |
+| **Diagram** | Flowcharts, connection lines | Technical, systematic |
+| **Gradient** | Smooth color transitions, glassmorphism | Modern, dynamic |
+| **Flat Design** | Bold geometric shapes, solid colors | Modern, clean |
+| **Isometric** | 3D isometric illustration, 30° angles | Technical, dimensional |
+| **Tech Themed** | Premium 3D, glassmorphism, neon accents | Innovative, cutting-edge |
+| **Professional** | Corporate design, refined imagery | Trustworthy, professional |
 
 ### How It Works
 
@@ -191,6 +199,54 @@ Uses **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`) - also known as "Nano
    - Aesthetic & color palette (tech-specific hex codes)
    - Context alignment
 4. **Image Generation**: Gemini generates high-conversion LinkedIn visuals
+
+### Style Recommendation Logic
+
+The "Recommended based on content" feature analyzes your post and suggests optimal image styles. Styles marked with an "AI" badge in the UI are recommendations.
+
+#### Content Type Classification
+
+Posts are classified into 6 content types:
+
+| Content Type | Description | Example Post Topics |
+|--------------|-------------|---------------------|
+| Tutorial | Step-by-step guides, how-tos | "How to deploy with Docker", "Setting up CI/CD" |
+| Announcement | Product launches, releases | "Introducing v2.0", "New feature alert" |
+| Tips | Quick insights, best practices | "5 tips for better APIs", "Lessons learned" |
+| Story | Personal narratives, journeys | "My journey to senior engineer", "How we scaled" |
+| Technical | Architecture, deep dives | "System design breakdown", "Performance optimization" |
+| Career | Professional growth, hiring | "We're hiring!", "Career advice" |
+
+#### Content Type → Style Mapping
+
+Each content type has recommended styles (in priority order):
+
+| Content Type | Recommended Styles |
+|--------------|-------------------|
+| Tutorial | Infographic, Minimalist, Conceptual, Diagram, Illustrated |
+| Announcement | Gradient, Abstract, Minimalist, Professional, Flat Design |
+| Tips | Flat Design, Minimalist, Infographic, Illustrated, Conceptual |
+| Story | Photorealistic, Illustrated, Abstract, Gradient, Conceptual |
+| Technical | Diagram, Isometric, Tech Themed, Minimalist, Conceptual |
+| Career | Professional, Minimalist, Gradient, Flat Design, Photorealistic |
+
+#### Technology → Style Influence
+
+Detected technologies in your post can influence style recommendations:
+
+| Technology Category | Technologies | Influenced Styles |
+|--------------------|--------------|-------------------|
+| Cloud/DevOps | AWS, Azure, GCP, Docker, Kubernetes | Isometric, Diagram |
+| AI/ML | TensorFlow, PyTorch, LangChain, OpenAI | Abstract, Conceptual |
+| Web Frameworks | React, Vue, Angular, Next.js | Flat Design, Tech Themed |
+| Backend | Java, Spring, .NET | Professional, Diagram |
+| Databases | PostgreSQL, MongoDB, Redis | Diagram, Isometric |
+
+#### User Selection Override
+
+- If you select a style manually, your selection is used (overrides recommendation)
+- If no style is selected, the first recommended style is used automatically
+- Recommendations are shown with "AI" badges in the UI for guidance
 
 ### Prompt Structure
 
