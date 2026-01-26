@@ -1,145 +1,113 @@
-"""Nano Banana Pro optimized prompt builder for LinkedIn image generation.
+"""Gemini-optimized prompt builder for LinkedIn image generation.
 
-This module builds prompts optimized for Google's Nano Banana Pro (gemini-3-pro-image-preview)
-model, following official best practices from Google and community research.
+This module builds prompts optimized for Google's Gemini 3 Pro Image
+(gemini-3-pro-image-preview) model using a clean, structured format
+focused on Scene Composition + Text Rendering + Aesthetic.
 
-Key optimizations (based on official Nano Banana Pro tips):
-- Structured formula: Subject + Action + Environment + Style + Lighting + Details
-- ALL CAPS emphasis for critical constraints (improves adherence)
-- Professional quality anchors (Pulitzer Prize, Vanity Fair references)
-- Explicit negation clauses with penalty warnings
-- Hex color precision for accurate rendering
-- Compositional rules (rule of thirds, negative space)
-- Camera/lighting specs (f-stop, golden hour, etc.)
-- LinkedIn professional context with scroll-stopping hooks
-
-Reference sources:
-- https://blog.google/products/gemini/prompting-tips-nano-banana-pro/
-- https://minimaxir.com/2025/11/nano-banana-prompts/
+Key structure:
+- Role: Expert LinkedIn Visual Designer
+- Task: High-conversion image for specific dimensions
+- Scene Composition: Layout type, background, foreground
+- Text Rendering: Headline and subtitle from post content
+- Aesthetic & Color: Style, palette with hex codes, mood
+- Context: Post summary for visual metaphor alignment
 """
 
 from typing import Optional
 from dataclasses import dataclass
 from enum import Enum
+import re
 
 from src.models.image_schemas import ImageStyle, ContentType, Sentiment
 
 
-# Style descriptors with rich visual details for Nano Banana
-# Enhanced with camera/lighting specs per official Google tips
-STYLE_DESCRIPTORS = {
+# Layout types for scene composition based on content type
+LAYOUT_TYPES = {
+    ContentType.TUTORIAL: {
+        "layout": "step-by-step instructional",
+        "background": "Clean workspace or IDE interface with subtle code elements",
+        "foreground": "Central learning pathway or progression visual with clear hierarchy",
+    },
+    ContentType.ANNOUNCEMENT: {
+        "layout": "bold central hero",
+        "background": "Dynamic gradient or abstract tech pattern",
+        "foreground": "Prominent 3D icon or symbol representing the announcement",
+    },
+    ContentType.TIPS: {
+        "layout": "modern card grid",
+        "background": "Soft gradient with subtle geometric patterns",
+        "foreground": "Lightbulb or insight icon with organized tip indicators",
+    },
+    ContentType.STORY: {
+        "layout": "narrative journey",
+        "background": "Abstract path or timeline visualization",
+        "foreground": "Transformation visual showing before/after or growth arc",
+    },
+    ContentType.TECHNICAL: {
+        "layout": "modern split-screen dashboard",
+        "background": "Dark IDE code editor interface or system architecture",
+        "foreground": "Glowing tech element, API diagram, or data flow visualization",
+    },
+    ContentType.CAREER: {
+        "layout": "aspirational upward",
+        "background": "Professional gradient with subtle corporate elements",
+        "foreground": "Rising graph, ladder, or achievement visual",
+    },
+}
+
+# Style descriptors with aesthetic details
+STYLE_AESTHETICS = {
     ImageStyle.INFOGRAPHIC: {
-        "description": "clean infographic style with organized data visualization",
-        "visual_elements": "geometric shapes, icons, clean typography, visual hierarchy",
-        "composition": "structured grid layout with clear sections and flow, rule of thirds",
-        "colors": "vibrant accent colors on clean white (#FFFFFF) or light gray (#F5F5F5) background",
-        "mood": "informative, educational, data-driven",
-        "camera": "straight-on flat perspective, even studio lighting",
-        "quality_anchor": "award-winning editorial infographic",
+        "style": "Clean infographic design with organized data visualization",
+        "mood": "Informative, educational, data-driven",
     },
     ImageStyle.MINIMALIST: {
-        "description": "minimalist design with ample negative space and essential elements only",
-        "visual_elements": "simple geometric forms, single focal point, refined typography",
-        "composition": "centered or asymmetric balance with generous whitespace, negative space utilization",
-        "colors": "monochromatic palette with subtle accent, pure white (#FFFFFF) dominant",
-        "mood": "elegant, sophisticated, focused",
-        "camera": "centered composition with shallow depth of field f/2.8",
-        "quality_anchor": "museum-quality minimalist art print",
+        "style": "Minimalist design with ample negative space and essential elements only",
+        "mood": "Elegant, sophisticated, focused",
     },
     ImageStyle.CONCEPTUAL: {
-        "description": "conceptual illustration representing abstract ideas visually",
-        "visual_elements": "metaphorical imagery, symbolic objects, creative interpretation",
-        "composition": "dynamic arrangement with clear visual metaphor, rule of thirds",
-        "colors": "harmonious palette supporting the concept with intentional color symbolism",
-        "mood": "thought-provoking, creative, insightful",
-        "camera": "artistic angle with dramatic lighting contrast",
-        "quality_anchor": "New Yorker magazine cover illustration",
+        "style": "Conceptual illustration with metaphorical imagery and symbolic objects",
+        "mood": "Thought-provoking, creative, insightful",
     },
     ImageStyle.ABSTRACT: {
-        "description": "abstract art style with flowing shapes and artistic expression",
-        "visual_elements": "organic forms, fluid gradients, artistic patterns",
-        "composition": "balanced asymmetry with visual movement and flow",
-        "colors": "bold, expressive color combinations with smooth gradient transitions",
-        "mood": "innovative, artistic, forward-thinking",
-        "camera": "macro lens perspective with soft focus edges",
-        "quality_anchor": "contemporary art gallery exhibition piece",
+        "style": "Abstract art with flowing shapes, fluid gradients, and artistic patterns",
+        "mood": "Innovative, artistic, forward-thinking",
     },
     ImageStyle.PHOTOREALISTIC: {
-        "description": "photorealistic rendering with lifelike detail and natural lighting",
-        "visual_elements": "realistic textures, natural shadows, cinematic depth of field",
-        "composition": "rule of thirds with natural focal point, leading lines",
-        "colors": "natural color grading, realistic skin tones and material properties",
-        "mood": "authentic, professional, trustworthy",
-        "camera": "shot on Sony A7IV, 85mm f/1.4 lens, golden hour backlighting",
-        "quality_anchor": "Pulitzer Prize winning photograph, Vanity Fair profile",
+        "style": "Photorealistic 3D rendering with cinematic lighting and depth",
+        "mood": "Authentic, professional, trustworthy",
     },
     ImageStyle.ILLUSTRATED: {
-        "description": "modern illustration style with hand-crafted artistic feel",
-        "visual_elements": "stylized characters or objects, artistic line work, texture overlays",
-        "composition": "narrative composition with visual storytelling, clear focal hierarchy",
-        "colors": "cohesive illustrated palette with character and warmth",
-        "mood": "friendly, approachable, creative",
-        "camera": "flat 2D illustration perspective with subtle depth layers",
-        "quality_anchor": "Apple marketing illustration style",
+        "style": "Modern illustration with stylized elements and artistic texture",
+        "mood": "Friendly, approachable, creative",
     },
     ImageStyle.DIAGRAM: {
-        "description": "technical diagram style showing systems and connections",
-        "visual_elements": "flowcharts, connection lines, nodes, technical icons, labeled components",
-        "composition": "logical flow from top-to-bottom or left-to-right, clear visual hierarchy",
-        "colors": "clear contrasting colors (#4285F4 blue, #34A853 green, #EA4335 red) for different elements",
-        "mood": "technical, systematic, educational",
-        "camera": "orthographic top-down or isometric technical view",
-        "quality_anchor": "Google Cloud architecture diagram",
+        "style": "Technical diagram with flowcharts, connection lines, and system nodes",
+        "mood": "Technical, systematic, educational",
     },
     ImageStyle.GRADIENT: {
-        "description": "modern gradient design with smooth color transitions",
-        "visual_elements": "flowing gradients, soft shapes, modern typography overlay, glass morphism",
-        "composition": "full-bleed gradient with floating elements and depth",
-        "colors": "smooth gradient transitions, mesh gradients, complementary color harmony",
-        "mood": "modern, dynamic, energetic",
-        "camera": "wide angle with depth blur, soft diffused lighting",
-        "quality_anchor": "Apple iOS wallpaper design quality",
+        "style": "Modern gradient design with smooth color transitions and glassmorphism",
+        "mood": "Modern, dynamic, energetic",
     },
     ImageStyle.FLAT_DESIGN: {
-        "description": "flat design style with bold shapes and no shadows",
-        "visual_elements": "geometric shapes, solid colors, simple icons, bold outlines",
-        "composition": "clean layered arrangement with clear visual hierarchy",
-        "colors": "bright saturated flat colors (#FF6B6B, #4ECDC4, #FFE66D) with strong contrast",
-        "mood": "modern, clean, accessible",
-        "camera": "flat 2D perspective, no depth or shadows",
-        "quality_anchor": "Dribbble trending flat illustration",
+        "style": "Flat design with bold geometric shapes, solid colors, and clean icons",
+        "mood": "Modern, clean, accessible",
     },
     ImageStyle.ISOMETRIC: {
-        "description": "isometric 3D style showing objects from precise 30-degree angle",
-        "visual_elements": "isometric objects, consistent 30° angle, layered depth, precise geometry",
-        "composition": "isometric grid with stacked or connected elements, clear z-axis ordering",
-        "colors": "consistent lighting with subtle shadows (#000000 at 10% opacity) for depth",
-        "mood": "technical, dimensional, organized",
-        "camera": "isometric projection at exact 30-degree angle, soft ambient occlusion",
-        "quality_anchor": "Monument Valley game art style",
+        "style": "Premium 3D isometric illustration with precise 30-degree angles",
+        "mood": "Technical, dimensional, organized",
     },
     ImageStyle.TECH_THEMED: {
-        "description": "technology-themed design with digital and futuristic elements",
-        "visual_elements": "circuit patterns, code snippets, digital particles, tech icons, HUD elements",
-        "composition": "dynamic tech-inspired layout with digital elements, data visualization",
-        "colors": "tech blues (#00D4FF), cyans (#00FFFF), electric purple (#8B5CF6) with neon accents",
-        "mood": "innovative, cutting-edge, digital",
-        "camera": "wide angle with depth of field, neon lighting, lens flares",
-        "quality_anchor": "Blade Runner 2049 concept art aesthetic",
+        "style": "Premium 3D isometric illustration, glassmorphism UI elements, neon accents",
+        "mood": "Innovative, cutting-edge, high-tech",
     },
     ImageStyle.PROFESSIONAL: {
-        "description": "corporate professional design suitable for business context",
-        "visual_elements": "clean graphics, business icons, refined imagery, subtle patterns",
-        "composition": "balanced formal arrangement with professional polish, golden ratio",
-        "colors": "corporate navy (#1E3A5F), slate gray (#64748B), accent blue (#3B82F6)",
-        "mood": "trustworthy, professional, established",
-        "camera": "straight-on corporate photography style, soft studio lighting",
-        "quality_anchor": "McKinsey consulting presentation visual",
+        "style": "Corporate professional design with refined imagery and subtle patterns",
+        "mood": "Trustworthy, professional, established",
     },
 }
 
 # Technology-specific color palettes with precise hex codes
-# Per Nano Banana best practices: hex codes improve color accuracy
 TECH_COLOR_PALETTES = {
     # Cloud providers
     "aws": {"primary": "#FF9900", "secondary": "#232F3E", "accent": "#FFFFFF"},
@@ -174,9 +142,10 @@ TECH_COLOR_PALETTES = {
     "kubernetes": {"primary": "#326CE5", "secondary": "#FFFFFF", "accent": "#1D4ED8"},
     "terraform": {"primary": "#7B42BC", "secondary": "#5C4EE5", "accent": "#FFFFFF"},
     "github actions": {"primary": "#2088FF", "secondary": "#24292E", "accent": "#FFFFFF"},
+    "github": {"primary": "#24292E", "secondary": "#FFFFFF", "accent": "#2088FF"},
     "jenkins": {"primary": "#D24939", "secondary": "#FFFFFF", "accent": "#335061"},
 
-    # AI/ML - Enhanced with specific hex codes
+    # AI/ML
     "machine learning": {"primary": "#6B21A8", "secondary": "#8B5CF6", "accent": "#00D4FF"},
     "ai": {"primary": "#8B5CF6", "secondary": "#3B82F6", "accent": "#00D4FF"},
     "artificial intelligence": {"primary": "#8B5CF6", "secondary": "#3B82F6", "accent": "#00D4FF"},
@@ -194,96 +163,48 @@ TECH_COLOR_PALETTES = {
     "elasticsearch": {"primary": "#FEC514", "secondary": "#343741", "accent": "#00BFB3"},
 }
 
-# Content type composition templates
-CONTENT_TYPE_COMPOSITIONS = {
-    ContentType.TUTORIAL: {
-        "layout": "step-by-step visual flow with numbered sections",
-        "focal_point": "clear learning progression from start to finish",
-        "camera": "straight-on educational perspective",
-    },
-    ContentType.ANNOUNCEMENT: {
-        "layout": "bold central message with supporting elements",
-        "focal_point": "key announcement text or symbolic representation",
-        "camera": "dynamic angle conveying excitement and importance",
-    },
-    ContentType.TIPS: {
-        "layout": "organized tips layout with visual bullet points",
-        "focal_point": "key insight or lightbulb moment",
-        "camera": "friendly, approachable angle",
-    },
-    ContentType.STORY: {
-        "layout": "narrative composition with journey elements",
-        "focal_point": "emotional center representing transformation",
-        "camera": "cinematic storytelling perspective",
-    },
-    ContentType.TECHNICAL: {
-        "layout": "technical diagram or architecture visualization",
-        "focal_point": "core system or technology component",
-        "camera": "technical documentation style, clear and precise",
-    },
-    ContentType.CAREER: {
-        "layout": "professional development visualization",
-        "focal_point": "growth and achievement elements",
-        "camera": "aspirational upward angle",
-    },
+# Default palettes by content type when no tech detected
+DEFAULT_PALETTES = {
+    ContentType.TUTORIAL: {"primary": "#3B82F6", "secondary": "#1E3A5F", "accent": "#00D4FF"},
+    ContentType.ANNOUNCEMENT: {"primary": "#8B5CF6", "secondary": "#1E1B4B", "accent": "#F59E0B"},
+    ContentType.TIPS: {"primary": "#10B981", "secondary": "#064E3B", "accent": "#FFFFFF"},
+    ContentType.STORY: {"primary": "#F59E0B", "secondary": "#1F2937", "accent": "#FFFFFF"},
+    ContentType.TECHNICAL: {"primary": "#00D4FF", "secondary": "#0A192F", "accent": "#FFFFFF"},
+    ContentType.CAREER: {"primary": "#6366F1", "secondary": "#1E1B4B", "accent": "#F59E0B"},
 }
 
-# Sentiment color modifiers
-SENTIMENT_COLORS = {
-    Sentiment.POSITIVE: "warm, optimistic colors with uplifting energy",
-    Sentiment.NEUTRAL: "balanced, professional color scheme",
-    Sentiment.NEGATIVE: "thoughtful, solution-oriented color approach",
-    Sentiment.INSPIRATIONAL: "vibrant, motivational colors with dynamic energy",
-    Sentiment.INFORMATIVE: "clear, educational colors with good contrast",
-}
-
-# LinkedIn dimensions with aspect ratio guidance
-DIMENSION_COMPOSITIONS = {
-    "1200x627": {
-        "aspect": "landscape (1.91:1)",
-        "guidance": "horizontal composition optimized for LinkedIn feed, wide cinematic feel",
-        "focal_area": "center-weighted with important elements in middle third",
-    },
-    "1080x1080": {
-        "aspect": "square (1:1)",
-        "guidance": "balanced square composition, works well for centered subjects",
-        "focal_area": "centered focal point with balanced margins",
-    },
-    "1200x1200": {
-        "aspect": "large square (1:1)",
-        "guidance": "detailed square composition with more space for complex visuals",
-        "focal_area": "centered with room for surrounding context",
-    },
+# Dimension info for task description
+DIMENSION_INFO = {
+    "1200x627": "link post (1200x627)",
+    "1080x1080": "square post (1080x1080)",
+    "1200x1200": "large square post (1200x1200)",
 }
 
 
 @dataclass
-class PromptComponents:
-    """Components assembled into final Nano Banana prompt.
-
-    Based on official Nano Banana formula:
-    Subject + Action + Environment + Style + Lighting + Details
-    """
+class GeminiPromptComponents:
+    """Components for Gemini-optimized prompt structure."""
+    dimension_desc: str
+    layout_type: str
+    background: str
+    foreground: str
+    headline: str
+    subtitle: str
+    style: str
+    palette: str
+    mood: str
     context: str
-    style_description: str
-    visual_elements: str
-    composition: str
-    camera_lighting: str  # NEW: Camera/lighting specs per official tips
-    color_guidance: str
-    quality_anchor: str  # NEW: Professional quality reference
-    content_summary: str
-    technical_specs: str
-    negation_clauses: str  # NEW: ALL CAPS constraints per Max Woolf research
 
 
-class NanoBananaPromptBuilder:
-    """Builds optimized prompts for Nano Banana image generation."""
+class GeminiPromptBuilder:
+    """Builds optimized prompts for Gemini 3 Pro Image generation."""
 
     def __init__(self):
-        self.style_descriptors = STYLE_DESCRIPTORS
+        self.layout_types = LAYOUT_TYPES
+        self.style_aesthetics = STYLE_AESTHETICS
         self.tech_palettes = TECH_COLOR_PALETTES
-        self.content_compositions = CONTENT_TYPE_COMPOSITIONS
-        self.dimension_compositions = DIMENSION_COMPOSITIONS
+        self.default_palettes = DEFAULT_PALETTES
+        self.dimension_info = DIMENSION_INFO
 
     def build_prompt(
         self,
@@ -296,7 +217,7 @@ class NanoBananaPromptBuilder:
         visual_elements: Optional[list[str]] = None,
         sentiment: Optional[Sentiment] = None,
     ) -> str:
-        """Build an optimized Nano Banana prompt.
+        """Build a Gemini-optimized prompt.
 
         Args:
             post_content: The LinkedIn post content.
@@ -306,10 +227,10 @@ class NanoBananaPromptBuilder:
             technologies: Detected technologies.
             keywords: Extracted keywords.
             visual_elements: Suggested visual elements.
-            sentiment: Content sentiment.
+            sentiment: Content sentiment (unused but kept for API compatibility).
 
         Returns:
-            Optimized prompt string for Nano Banana.
+            Optimized prompt string for Gemini 3 Pro Image.
         """
         components = self._assemble_components(
             post_content=post_content,
@@ -319,7 +240,6 @@ class NanoBananaPromptBuilder:
             technologies=technologies or [],
             keywords=keywords or [],
             visual_elements=visual_elements or [],
-            sentiment=sentiment or Sentiment.NEUTRAL,
         )
 
         return self._format_prompt(components)
@@ -333,280 +253,232 @@ class NanoBananaPromptBuilder:
         technologies: list[str],
         keywords: list[str],
         visual_elements: list[str],
-        sentiment: Sentiment,
-    ) -> PromptComponents:
-        """Assemble all prompt components using official Nano Banana formula."""
+    ) -> GeminiPromptComponents:
+        """Assemble prompt components for Gemini structure."""
 
-        # Context: LinkedIn professional purpose
-        context = self._build_context(content_type)
+        # Dimension description
+        dimension_desc = self.dimension_info.get(dimensions, "link post (1200x627)")
 
-        # Style description with rich visual details
-        style_description = self._build_style_description(style)
+        # Scene composition from content type
+        layout = self.layout_types.get(content_type, self.layout_types[ContentType.TECHNICAL])
+        layout_type = layout["layout"]
+        background = self._enhance_background(layout["background"], technologies, visual_elements)
+        foreground = self._enhance_foreground(layout["foreground"], technologies, keywords)
 
-        # Visual elements from analysis
-        visual_desc = self._build_visual_elements(visual_elements, keywords)
+        # Extract headline and subtitle from post content
+        headline, subtitle = self._extract_text_elements(post_content, keywords)
 
-        # Composition guidance
-        composition = self._build_composition(content_type, dimensions)
+        # Aesthetic from style
+        aesthetic = self.style_aesthetics.get(style, self.style_aesthetics[ImageStyle.TECH_THEMED])
+        style_desc = aesthetic["style"]
+        mood = aesthetic["mood"]
 
-        # Camera and lighting specs (NEW - per official Google tips)
-        camera_lighting = self._build_camera_lighting(style)
+        # Color palette
+        palette = self._build_palette(technologies, content_type)
 
-        # Color guidance based on tech stack
-        color_guidance = self._build_color_guidance(technologies, sentiment, style)
+        # Context summary
+        context = self._build_context_summary(post_content)
 
-        # Quality anchor reference (NEW - improves composition quality)
-        quality_anchor = self._build_quality_anchor(style)
-
-        # Content summary (truncated for prompt)
-        content_summary = self._build_content_summary(post_content)
-
-        # Technical specs for image
-        technical_specs = self._build_technical_specs(dimensions)
-
-        # Negation clauses with ALL CAPS (NEW - per Max Woolf research)
-        negation_clauses = self._build_negation_clauses()
-
-        return PromptComponents(
+        return GeminiPromptComponents(
+            dimension_desc=dimension_desc,
+            layout_type=layout_type,
+            background=background,
+            foreground=foreground,
+            headline=headline,
+            subtitle=subtitle,
+            style=style_desc,
+            palette=palette,
+            mood=mood,
             context=context,
-            style_description=style_description,
-            visual_elements=visual_desc,
-            composition=composition,
-            camera_lighting=camera_lighting,
-            color_guidance=color_guidance,
-            quality_anchor=quality_anchor,
-            content_summary=content_summary,
-            technical_specs=technical_specs,
-            negation_clauses=negation_clauses,
         )
 
-    def _build_context(self, content_type: ContentType) -> str:
-        """Build LinkedIn professional context with scroll-stopping hooks.
-
-        Per official Nano Banana tips: Be descriptive and specific about
-        the intended outcome, environment, and audience.
-        """
-        type_contexts = {
-            ContentType.TUTORIAL: "educational content teaching a valuable skill",
-            ContentType.ANNOUNCEMENT: "exciting professional news or product launch",
-            ContentType.TIPS: "actionable advice and expert insights",
-            ContentType.STORY: "compelling personal or professional journey",
-            ContentType.TECHNICAL: "technical expertise demonstrating deep knowledge",
-            ContentType.CAREER: "career growth and professional achievement",
-        }
-        type_context = type_contexts.get(content_type, "professional content")
-
-        return (
-            f"Create a scroll-stopping, visually striking image for a LinkedIn post about {type_context}. "
-            "Target audience: tech professionals, software engineers, and business leaders. "
-            "The image must immediately grab attention in a fast-scrolling LinkedIn feed, "
-            "convey credibility and expertise, and make viewers pause to engage. "
-            "Professional quality suitable for a top-tier technology publication."
-        )
-
-    def _build_style_description(self, style: ImageStyle) -> str:
-        """Build rich style description with visual elements and mood.
-
-        Per official Nano Banana formula: Style is a core component
-        that should specify aesthetic clearly.
-        """
-        descriptor = self.style_descriptors.get(style, self.style_descriptors[ImageStyle.MINIMALIST])
-
-        return (
-            f"Art Style: {descriptor['description']}. "
-            f"MUST include these visual elements: {descriptor['visual_elements']}. "
-            f"Composition approach: {descriptor['composition']}. "
-            f"The overall mood and feeling should be: {descriptor['mood']}."
-        )
-
-    def _build_visual_elements(
+    def _enhance_background(
         self,
+        base_background: str,
+        technologies: list[str],
         visual_elements: list[str],
-        keywords: list[str],
     ) -> str:
-        """Build visual elements description."""
-        parts = []
+        """Enhance background description with tech context."""
+        enhancements = []
+
+        if technologies:
+            tech_str = ", ".join(technologies[:2])
+            enhancements.append(f"featuring {tech_str} elements")
 
         if visual_elements:
-            elements_str = ", ".join(visual_elements[:4])
-            parts.append(f"Incorporate visual elements representing: {elements_str}")
+            elem_str = ", ".join(visual_elements[:2])
+            enhancements.append(f"with {elem_str}")
+
+        if enhancements:
+            return f"{base_background}, {', '.join(enhancements)}"
+        return base_background
+
+    def _enhance_foreground(
+        self,
+        base_foreground: str,
+        technologies: list[str],
+        keywords: list[str],
+    ) -> str:
+        """Enhance foreground description with specific elements."""
+        if technologies:
+            main_tech = technologies[0]
+            return f"{base_foreground} representing {main_tech}"
 
         if keywords:
-            keywords_str = ", ".join(keywords[:5])
-            parts.append(f"Key themes to visualize: {keywords_str}")
+            main_keyword = keywords[0]
+            return f"{base_foreground} symbolizing {main_keyword}"
 
-        if not parts:
-            return "Focus on clean, professional visual representation of the concept."
+        return base_foreground
 
-        return ". ".join(parts) + "."
+    def _extract_text_elements(
+        self,
+        post_content: str,
+        keywords: list[str],
+    ) -> tuple[str, str]:
+        """Extract headline and subtitle from post content.
 
-    def _build_composition(self, content_type: ContentType, dimensions: str) -> str:
-        """Build composition and camera guidance."""
-        content_comp = self.content_compositions.get(
-            content_type,
-            self.content_compositions[ContentType.TECHNICAL]
-        )
-        dim_comp = self.dimension_compositions.get(
-            dimensions,
-            self.dimension_compositions["1200x627"]
-        )
+        Attempts to find a compelling headline from the post, falling back
+        to keyword-based generation if needed.
+        """
+        lines = post_content.strip().split('\n')
+        lines = [line.strip() for line in lines if line.strip()]
 
-        return (
-            f"Composition: {content_comp['layout']}. "
-            f"Focal point: {content_comp['focal_point']}. "
-            f"Camera perspective: {content_comp['camera']}. "
-            f"Aspect ratio: {dim_comp['aspect']} - {dim_comp['guidance']}. "
-            f"Important: {dim_comp['focal_area']}."
-        )
+        headline = ""
+        subtitle = ""
 
-    def _build_color_guidance(
+        # Try to find a short, impactful first line as headline
+        if lines:
+            first_line = lines[0]
+            # Clean up common LinkedIn post patterns
+            first_line = re.sub(r'^[🚀💡🔥✨⚡️🎯]+\s*', '', first_line)  # Remove leading emojis
+            first_line = re.sub(r'[🚀💡🔥✨⚡️🎯]+$', '', first_line)  # Remove trailing emojis
+
+            if len(first_line) <= 60:
+                headline = first_line
+            else:
+                # Truncate to first sentence or phrase
+                match = re.match(r'^([^.!?]+[.!?]?)', first_line)
+                if match and len(match.group(1)) <= 60:
+                    headline = match.group(1)
+                else:
+                    # Use first few words
+                    words = first_line.split()[:6]
+                    headline = ' '.join(words)
+                    if len(headline) < len(first_line):
+                        headline += "..."
+
+        # Generate subtitle from keywords or second line
+        if len(lines) > 1:
+            second_line = lines[1]
+            second_line = re.sub(r'^[🚀💡🔥✨⚡️🎯•\-]+\s*', '', second_line)
+            if len(second_line) <= 50:
+                subtitle = second_line
+            elif keywords:
+                subtitle = ' | '.join(keywords[:3])
+        elif keywords:
+            subtitle = ' | '.join(keywords[:3])
+
+        # Fallback if no headline extracted
+        if not headline and keywords:
+            headline = keywords[0].title()
+            if len(keywords) > 1:
+                subtitle = ' | '.join(keywords[1:4])
+
+        return headline, subtitle
+
+    def _build_palette(
         self,
         technologies: list[str],
-        sentiment: Sentiment,
-        style: ImageStyle,
+        content_type: ContentType,
     ) -> str:
-        """Build color palette guidance with precise hex codes.
+        """Build color palette string with hex codes."""
+        palette = None
 
-        Per Nano Banana best practices: hex color codes (#FF9900) improve
-        color accuracy significantly over color names.
-        """
-        parts = []
-
-        # Tech-specific colors with hex codes
-        tech_colors = []
-        for tech in technologies[:3]:
+        # Try to find tech-specific palette
+        for tech in technologies[:2]:
             tech_lower = tech.lower()
             if tech_lower in self.tech_palettes:
                 palette = self.tech_palettes[tech_lower]
-                tech_colors.append(
-                    f"{tech}: primary {palette['primary']}, "
-                    f"secondary {palette['secondary']}, "
-                    f"accent {palette['accent']}"
-                )
+                break
 
-        if tech_colors:
-            parts.append(f"EXACT COLOR PALETTE: {'; '.join(tech_colors)}")
+        # Fall back to content type default
+        if not palette:
+            palette = self.default_palettes.get(
+                content_type,
+                self.default_palettes[ContentType.TECHNICAL]
+            )
 
-        # Style default colors
-        style_desc = self.style_descriptors.get(style, {})
-        if "colors" in style_desc:
-            parts.append(f"Style palette: {style_desc['colors']}")
+        return (
+            f"Deep background ({palette['secondary']}) with "
+            f"primary accent ({palette['primary']}) and "
+            f"highlight ({palette['accent']})"
+        )
 
-        # Sentiment modifier
-        sentiment_mod = SENTIMENT_COLORS.get(sentiment, SENTIMENT_COLORS[Sentiment.NEUTRAL])
-        parts.append(f"Mood colors: {sentiment_mod}")
-
-        if not parts:
-            return "Use a professional, harmonious color palette with good contrast."
-
-        return " ".join(parts)
-
-    def _build_content_summary(self, post_content: str) -> str:
-        """Build content summary for prompt."""
-        max_len = 300
+    def _build_context_summary(self, post_content: str) -> str:
+        """Build one-sentence context summary."""
         content = post_content.strip()
 
-        if len(content) > max_len:
-            content = content[:max_len] + "..."
+        # Get first meaningful sentence
+        sentences = re.split(r'[.!?]+', content)
+        sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 20]
 
-        return f'The post discusses: "{content}"'
+        if sentences:
+            summary = sentences[0]
+            # Clean up
+            summary = re.sub(r'^[🚀💡🔥✨⚡️🎯]+\s*', '', summary)
+            if len(summary) > 150:
+                summary = summary[:147] + "..."
+            return summary
 
-    def _build_technical_specs(self, dimensions: str) -> str:
-        """Build technical specifications."""
-        dim_info = self.dimension_compositions.get(
-            dimensions,
-            self.dimension_compositions["1200x627"]
-        )
+        # Fallback to truncated content
+        if len(content) > 150:
+            return content[:147] + "..."
+        return content
 
-        return (
-            f"Generate image at {dimensions} pixels ({dim_info['aspect']}). "
-            "High resolution, detailed, sharp, production-ready for social media."
-        )
+    def _format_prompt(self, components: GeminiPromptComponents) -> str:
+        """Format the final Gemini-optimized prompt."""
+        prompt = f"""**Role:** Expert LinkedIn Visual Designer
+**Task:** Create a high-conversion image for a {components.dimension_desc}.
 
-    def _build_camera_lighting(self, style: ImageStyle) -> str:
-        """Build camera and lighting specifications.
+**1. SCENE COMPOSITION:**
+Create a {components.layout_type} composition.
+- **Background:** {components.background}
+- **Foreground:** {components.foreground}
 
-        Based on official Google tips: include camera/lighting details like
-        'Low-angle shot with f/1.8 shallow depth of field' or 'Golden hour backlighting'.
-        """
-        descriptor = self.style_descriptors.get(style, self.style_descriptors[ImageStyle.MINIMALIST])
-        camera = descriptor.get("camera", "professional photography lighting")
+**2. TEXT RENDERING (Crucial):**
+You MUST render the following text clearly and legibly:
+- **Headline:** "{components.headline}" (Large, bold, high contrast)
+- **Sub-text:** "{components.subtitle}" (Smaller, secondary color)
+*Ensure text has high contrast against the background.*
 
-        return f"Camera and Lighting: {camera}."
+**3. AESTHETIC & COLOR:**
+- **Style:** {components.style}
+- **Palette:** {components.palette}
+- **Mood:** {components.mood}
 
-    def _build_quality_anchor(self, style: ImageStyle) -> str:
-        """Build quality anchor reference.
+**4. CONTEXT:**
+The post is about: {components.context}
+Ensure the visual metaphors align with this topic.
 
-        Per Max Woolf's research: phrases like 'Pulitzer Prize winning cover photo'
-        and 'Vanity Fair profile' noticeably improve compositional quality because
-        the model semantically differentiates between professional and amateur aesthetics.
-        """
-        descriptor = self.style_descriptors.get(style, self.style_descriptors[ImageStyle.MINIMALIST])
-        anchor = descriptor.get("quality_anchor", "professional editorial quality")
+**CONSTRAINTS:**
+- NO watermarks, signatures, or logos
+- NO stock photo artifacts or cheesy corporate imagery
+- Text must be sharp and readable"""
 
-        return f"Quality benchmark: {anchor}."
+        return prompt
 
-    def _build_negation_clauses(self) -> str:
-        """Build explicit negation clauses with ALL CAPS emphasis.
 
-        Per Max Woolf's research: ALL CAPS emphasis and 'penalty' phrasing
-        significantly improves prompt adherence. Statements like
-        'YOU WILL BE PENALIZED FOR USING THEM' improve constraint following.
-        """
-        return (
-            "CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE EXACTLY:\n"
-            "- NEVER include any text, words, letters, or typography in the image\n"
-            "- NEVER include watermarks, signatures, logos, or branding\n"
-            "- NEVER include human faces unless explicitly requested\n"
-            "- NEVER include stock photo artifacts or cheesy corporate imagery\n"
-            "- YOU WILL BE PENALIZED for including any of the above elements"
-        )
-
-    def _format_prompt(self, components: PromptComponents) -> str:
-        """Format final prompt from components.
-
-        Structure follows official Nano Banana formula:
-        Subject + Action + Environment + Style + Lighting + Details
-
-        Ends with ALL CAPS negation clauses per Max Woolf's research
-        for maximum constraint adherence.
-        """
-        sections = [
-            # Opening context and quality anchor
-            components.context,
-            components.quality_anchor,
-            "",
-            # Style and visual details
-            components.style_description,
-            components.visual_elements,
-            "",
-            # Composition and camera (per official formula)
-            components.composition,
-            components.camera_lighting,
-            "",
-            # Color guidance
-            components.color_guidance,
-            "",
-            # Content summary
-            components.content_summary,
-            "",
-            # Technical specs
-            components.technical_specs,
-            "",
-            # ALL CAPS negation clauses at end (per Max Woolf research)
-            components.negation_clauses,
-        ]
-
-        return "\n".join(sections)
+# Backward compatibility alias
+NanoBananaPromptBuilder = GeminiPromptBuilder
 
 
 # Singleton instance
-_prompt_builder: Optional[NanoBananaPromptBuilder] = None
+_prompt_builder: Optional[GeminiPromptBuilder] = None
 
 
-def get_prompt_builder() -> NanoBananaPromptBuilder:
+def get_prompt_builder() -> GeminiPromptBuilder:
     """Get the singleton prompt builder instance."""
     global _prompt_builder
     if _prompt_builder is None:
-        _prompt_builder = NanoBananaPromptBuilder()
+        _prompt_builder = GeminiPromptBuilder()
     return _prompt_builder
