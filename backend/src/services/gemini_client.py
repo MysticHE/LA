@@ -1,7 +1,7 @@
-"""Gemini Nano Banana API client for AI-powered image generation.
+"""Gemini Nano Banana Pro API client for AI-powered image generation.
 
 This module provides a wrapper around the Gemini API for generating
-images for LinkedIn posts using the Nano Banana (gemini-2.5-flash-image) model.
+images for LinkedIn posts using the Nano Banana Pro (gemini-3-pro-image-preview) model.
 """
 
 from typing import Optional
@@ -65,8 +65,8 @@ class GeminiClient:
     # Base URL for Gemini API
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
-    # Default model for image generation (Nano Banana)
-    DEFAULT_MODEL = "gemini-2.5-flash-image"
+    # Default model for image generation (Nano Banana Pro)
+    DEFAULT_MODEL = "gemini-3-pro-image-preview"
 
     # Default timeout in seconds
     DEFAULT_TIMEOUT = 60.0
@@ -123,7 +123,7 @@ class GeminiClient:
                 }]
             }],
             "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"],
+                "responseModalities": ["IMAGE"],
                 "imageConfig": {
                     "aspectRatio": aspect_ratio
                 }

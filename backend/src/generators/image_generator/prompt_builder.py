@@ -1,6 +1,6 @@
-"""Nano Banana optimized prompt builder for LinkedIn image generation.
+"""Nano Banana Pro optimized prompt builder for LinkedIn image generation.
 
-This module builds prompts optimized for Google's Nano Banana (gemini-2.5-flash-image)
+This module builds prompts optimized for Google's Nano Banana Pro (gemini-3-pro-image-preview)
 model, following official best practices from Google and community research.
 
 Key optimizations (based on official Nano Banana Pro tips):
