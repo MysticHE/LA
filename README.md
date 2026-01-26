@@ -6,7 +6,7 @@ Transform your GitHub projects into engaging LinkedIn posts with AI-powered cont
 
 - **GitHub Repository Analysis**: Extract tech stack, features, and README content
 - **Multi-Provider AI Generation**: Generate posts using Claude, OpenAI, or Gemini
-- **AI Image Generation**: Create accompanying visuals for your posts
+- **AI Image Generation**: Create professional visuals using Gemini 3 Pro Image (Nano Banana Pro)
 - **3 Post Styles**:
   - Problem-Solution: Present your project as the solution to a relatable problem
   - Tips & Learnings: Share key insights and lessons learned
@@ -158,6 +158,70 @@ linkedin-content-automation/
 - Rate limiting protects against abuse
 - Security headers (CSP, XSS protection, etc.)
 - No API keys stored on server permanently
+
+## AI Image Generation
+
+### Model
+Uses **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`) - also known as "Nano Banana Pro" - for high-quality LinkedIn post images.
+
+### Supported Dimensions
+| Format | Dimensions | Aspect Ratio | Use Case |
+|--------|------------|--------------|----------|
+| Link Post (default) | 1200x627 | 16:9 | Standard link preview |
+| Square | 1080x1080 | 1:1 | Engagement posts |
+| Large Square | 1200x1200 | 1:1 | Detailed visuals |
+
+### Image Styles
+12 professionally designed styles:
+- **Infographic** - Data visualization layouts
+- **Minimalist** - Clean, focused designs
+- **Tech Themed** - Glassmorphism, neon accents
+- **Isometric** - Premium 3D illustrations
+- **Photorealistic** - Cinematic renders
+- **Gradient** - Modern color transitions
+- And 6 more...
+
+### How It Works
+
+1. **Content Analysis**: Analyzes your post for themes, technologies, and keywords
+2. **Style Recommendation**: AI recommends optimal visual style based on content type
+3. **Prompt Generation**: Builds a Gemini-optimized prompt with:
+   - Scene composition (layout, background, foreground)
+   - Text rendering (headline + subtitle extracted from post)
+   - Aesthetic & color palette (tech-specific hex codes)
+   - Context alignment
+4. **Image Generation**: Gemini generates high-conversion LinkedIn visuals
+
+### Prompt Structure
+
+```
+**Role:** Expert LinkedIn Visual Designer
+**Task:** Create a high-conversion image for a link post (1200x627).
+
+**1. SCENE COMPOSITION:**
+- Background: [context-aware with tech elements]
+- Foreground: [focal point representing topic]
+
+**2. TEXT RENDERING:**
+- Headline: "[extracted from post]"
+- Sub-text: "[keywords]"
+
+**3. AESTHETIC & COLOR:**
+- Style: [selected style]
+- Palette: Deep background (#hex) with accent (#hex)
+- Mood: [professional mood]
+
+**4. CONTEXT:**
+The post is about: [summary]
+```
+
+### Tech-Specific Color Palettes
+Auto-detects technologies and applies brand colors:
+- **AWS**: #FF9900 / #232F3E
+- **Python**: #3776AB / #FFD43B
+- **React**: #61DAFB / #282C34
+- **Docker**: #2496ED / #003F8C
+- And 30+ more...
 
 ## License
 
