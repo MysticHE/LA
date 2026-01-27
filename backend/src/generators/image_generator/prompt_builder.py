@@ -44,9 +44,9 @@ LAYOUT_TYPES = {
         "foreground": "Transformation visual showing before/after or growth arc",
     },
     ContentType.TECHNICAL: {
-        "layout": "modern split-screen dashboard",
-        "background": "Dark IDE code editor interface or system architecture",
-        "foreground": "Glowing tech element, API diagram, or data flow visualization",
+        "layout": "modern professional",
+        "background": "Dark gradient with subtle tech-inspired geometric patterns",
+        "foreground": "Clean abstract 3D shapes or floating geometric elements",
     },
     ContentType.CAREER: {
         "layout": "aspirational upward",
@@ -82,7 +82,7 @@ STYLE_AESTHETICS = {
         "mood": "Friendly, approachable, creative",
     },
     ImageStyle.DIAGRAM: {
-        "style": "Technical diagram with flowcharts, connection lines, and system nodes",
+        "style": "Clean technical illustration with organized structure and clear hierarchy",
         "mood": "Technical, systematic, educational",
     },
     ImageStyle.GRADIENT: {
@@ -410,28 +410,8 @@ class GeminiPromptBuilder:
         technologies: list[str],
         content_type: ContentType,
     ) -> str:
-        """Build color palette string with hex codes."""
-        palette = None
-
-        # Try to find tech-specific palette
-        for tech in technologies[:2]:
-            tech_lower = tech.lower()
-            if tech_lower in self.tech_palettes:
-                palette = self.tech_palettes[tech_lower]
-                break
-
-        # Fall back to content type default
-        if not palette:
-            palette = self.default_palettes.get(
-                content_type,
-                self.default_palettes[ContentType.TECHNICAL]
-            )
-
-        return (
-            f"Deep background ({palette['secondary']}) with "
-            f"primary accent ({palette['primary']}) and "
-            f"highlight ({palette['accent']})"
-        )
+        """Build color palette description without hardcoded hex codes."""
+        return "professional colors that complement the content"
 
     def _build_context_summary(self, post_content: str) -> str:
         """Build one-sentence context summary."""
