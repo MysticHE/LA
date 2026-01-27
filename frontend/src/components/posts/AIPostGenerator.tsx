@@ -143,6 +143,13 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     handleGenerate(selectedStyle)
   }
 
+  const handleContentChange = (style: PostStyle, newContent: string) => {
+    setGeneratedContents((prev) => ({
+      ...prev,
+      [style]: prev[style] ? { ...prev[style]!, content: newContent } : null,
+    }))
+  }
+
   const handleProviderSelect = (provider: AIProvider) => {
     setSelectedProvider(provider)
     setError(null)
@@ -268,6 +275,7 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
                   style={generatedContents[style.id]!.style}
                   isRegenerating={isGenerating && selectedStyle === style.id}
                   onRegenerate={handleRegenerate}
+                  onContentChange={(newContent) => handleContentChange(style.id, newContent)}
                 />
               )}
 

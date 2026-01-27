@@ -34,3 +34,4 @@ Write a LinkedIn post (max 3000 characters) in **technical showcase format**:
 - Use technical terms but explain complex concepts briefly
 - Include 3-5 relevant technical hashtags
 - Link to the GitHub repo (mention it's open source if applicable)
+- **IMPORTANT: Do NOT use markdown formatting (no asterisks, no bold, no italics). Write plain text only.**

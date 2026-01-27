@@ -30,3 +30,4 @@ Write a LinkedIn post (max 3000 characters) in **tips & learnings format**:
 - Use emojis to visually separate tips (optional)
 - Include 3-5 relevant hashtags at the end
 - Make it educational but not preachy
+- **IMPORTANT: Do NOT use markdown formatting (no asterisks, no bold, no italics). Write plain text only.**

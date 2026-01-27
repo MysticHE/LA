@@ -330,6 +330,21 @@ class GeminiPromptBuilder:
 
         return base_foreground
 
+    def _clean_markdown(self, text: str) -> str:
+        """Remove markdown formatting from text.
+
+        Strips asterisks, underscores, and other markdown syntax
+        that shouldn't appear in image text.
+        """
+        # Remove bold/italic markdown: **text**, *text*, __text__, _text_
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **bold**
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)  # *italic*
+        text = re.sub(r'__([^_]+)__', r'\1', text)  # __bold__
+        text = re.sub(r'_([^_]+)_', r'\1', text)  # _italic_
+        # Remove any remaining stray asterisks
+        text = re.sub(r'\*+', '', text)
+        return text.strip()
+
     def _extract_text_elements(
         self,
         post_content: str,
@@ -352,6 +367,8 @@ class GeminiPromptBuilder:
             # Clean up common LinkedIn post patterns
             first_line = re.sub(r'^[🚀💡🔥✨⚡️🎯]+\s*', '', first_line)  # Remove leading emojis
             first_line = re.sub(r'[🚀💡🔥✨⚡️🎯]+$', '', first_line)  # Remove trailing emojis
+            # Clean markdown formatting
+            first_line = self._clean_markdown(first_line)
 
             if len(first_line) <= 60:
                 headline = first_line
@@ -371,6 +388,8 @@ class GeminiPromptBuilder:
         if len(lines) > 1:
             second_line = lines[1]
             second_line = re.sub(r'^[🚀💡🔥✨⚡️🎯•\-]+\s*', '', second_line)
+            # Clean markdown formatting
+            second_line = self._clean_markdown(second_line)
             if len(second_line) <= 50:
                 subtitle = second_line
             elif keywords:

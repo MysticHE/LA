@@ -29,3 +29,4 @@ Write a LinkedIn post (max 3000 characters) in **problem-solution format**:
 - Make it personal - share your "why" behind building this
 - Keep paragraphs short (1-3 lines) for mobile readability
 - Don't oversell - be genuine about what it does and doesn't do
+- **IMPORTANT: Do NOT use markdown formatting (no asterisks, no bold, no italics). Write plain text only.**

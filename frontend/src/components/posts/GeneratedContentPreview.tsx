@@ -14,6 +14,7 @@ interface GeneratedContentPreviewProps {
   style: string
   isRegenerating?: boolean
   onRegenerate?: () => void
+  onContentChange?: (newContent: string) => void
 }
 
 const styleLabels: Record<string, string> = {
@@ -27,6 +28,7 @@ export function GeneratedContentPreview({
   style,
   isRegenerating = false,
   onRegenerate,
+  onContentChange,
 }: GeneratedContentPreviewProps) {
   const { copied, copy } = useClipboard()
   const { geminiAuth } = useAppStore()
@@ -62,8 +64,9 @@ export function GeneratedContentPreview({
           <div className="relative">
             <Textarea
               value={content}
-              readOnly
+              onChange={(e) => onContentChange?.(e.target.value)}
               className="min-h-[300px] font-mono text-sm resize-none"
+              placeholder="Edit your generated post here..."
             />
             {isRegenerating && (
               <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-md">
