@@ -207,22 +207,22 @@ Uses **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`) - also known as "Nano
 *Image Size parameter optimizes output quality per Gemini API best practices.*
 
 ### Image Styles
-12 professionally designed styles:
+12 professionally designed styles (optimized for clean, artistic visuals):
 
 | Style | Description | Mood |
 |-------|-------------|------|
-| **Infographic** | Clean data visualization layouts | Informative, educational |
-| **Minimalist** | Ample negative space, focused | Elegant, sophisticated |
-| **Conceptual** | Metaphorical imagery, creative | Thought-provoking |
-| **Abstract** | Flowing shapes, fluid gradients | Innovative, artistic |
-| **Photorealistic** | 3D rendering, cinematic lighting | Authentic, professional |
-| **Illustrated** | Stylized elements, artistic texture | Friendly, approachable |
-| **Diagram** | Flowcharts, connection lines | Technical, systematic |
-| **Gradient** | Smooth color transitions, glassmorphism | Modern, dynamic |
-| **Flat Design** | Bold geometric shapes, solid colors | Modern, clean |
-| **Isometric** | 3D isometric illustration, 30° angles | Technical, dimensional |
-| **Tech Themed** | Premium 3D, glassmorphism, neon accents | Innovative, cutting-edge |
-| **Professional** | Corporate design, refined imagery | Trustworthy, professional |
+| **Infographic** | Bold typography as hero element | Clear, impactful, professional |
+| **Minimalist** | Generous whitespace, one focal element | Elegant, sophisticated, premium |
+| **Conceptual** | Dreamlike atmosphere, soft focus | Thought-provoking, inspiring |
+| **Abstract** | Organic flowing shapes, color blending | Innovative, artistic, expressive |
+| **Photorealistic** | Cinematic lighting, shallow depth of field | Authentic, premium, editorial |
+| **Illustrated** | Flat illustration, smooth curves | Friendly, approachable, engaging |
+| **Diagram** | Clean layout, visual hierarchy, bold text | Organized, clear, educational |
+| **Gradient** | Gradient meshes, glass effects | Modern, dynamic, vibrant |
+| **Flat Design** | Solid color blocks, simple shapes | Modern, clean, bold |
+| **Isometric** | Stylized 3D, clean lines | Modern, dimensional, polished |
+| **Tech Themed** | Neon glows, dark moody atmosphere | Innovative, cutting-edge, bold |
+| **Professional** | Refined gradients, sophisticated typography | Trustworthy, established, premium |
 
 ### How It Works
 
@@ -283,42 +283,44 @@ Detected technologies in your post can influence style recommendations:
 - If no style is selected, the first recommended style is used automatically
 - Recommendations are shown with "AI" badges in the UI for guidance
 
-### Prompt Structure (Narrative Format)
+### Prompt Structure
 
-Following Gemini's official best practice of "describe the scene, don't just list keywords", prompts use flowing narrative paragraphs:
+The prompt builder generates clean, artistic visuals with explicit negative prompts to avoid technical diagrams:
 
 ```
-Create a professional LinkedIn link post image with a [layout] composition.
+Create a stunning LinkedIn [dimension] image.
 
-The scene features [background description]. In the foreground, position
-[foreground elements]. Use dramatic yet professional lighting with a subtle
-gradient glow emanating from the focal point, creating depth and visual
-interest. Frame the composition with a slight wide-angle perspective.
+VISUAL STYLE: [style description]. The mood is [mood].
 
-Render the headline text "[headline]" prominently in a clean, bold, modern
-sans-serif typeface. Position it for maximum impact with strong contrast
-against the background. Below it, add the supporting text "[subtitle]" in
-a lighter weight of the same font family.
+COMPOSITION: [layout] layout with [background]. Add [foreground] for visual
+interest. Use cinematic lighting with soft shadows and subtle depth.
 
-Apply a [style] aesthetic throughout. The color scheme uses [palette with
-hex codes]. The overall mood should feel [mood description].
+TEXT OVERLAY: Display "[headline]" as the main headline in large, bold,
+modern sans-serif typography. Below it, show "[subtitle]" in smaller,
+lighter text. Ensure text is crisp and highly readable with strong contrast.
 
-This image accompanies a LinkedIn post about: [context summary]
+COLOR: Use professional colors that complement the content with rich,
+harmonious tones.
+
+CONTEXT: This accompanies a LinkedIn post about: [context summary]
+
+CRITICAL - DO NOT INCLUDE:
+- No diagrams, flowcharts, or charts
+- No neural networks, nodes, or connection lines
+- No code, terminals, or IDE screenshots
+- No icons, logos, or clip art
+- No busy infographics or data visualizations
+- No stock photo watermarks
+
+Create an artistic, premium quality image that looks like professional
+marketing material, not a technical diagram.
 ```
 
 **Key prompt optimizations:**
-- Narrative paragraphs instead of bullet points
-- Photography terminology (lighting, camera perspective)
-- Descriptive font guidance ("clean, bold, modern sans-serif")
-- No markdown formatting in prompts
-
-### Tech-Specific Color Palettes
-Auto-detects technologies and applies brand colors:
-- **AWS**: #FF9900 / #232F3E
-- **Python**: #3776AB / #FFD43B
-- **React**: #61DAFB / #282C34
-- **Docker**: #2496ED / #003F8C
-- And 30+ more...
+- Clean gradient backgrounds instead of technical elements
+- Explicit negative prompts to avoid diagrams/charts
+- Focus on typography and artistic composition
+- Cinematic lighting and soft visual effects
 
 ## License
 

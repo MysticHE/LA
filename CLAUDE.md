@@ -37,29 +37,40 @@ linkedin-content-automation/
 **API Parameters** (per official Gemini docs):
 - `responseModalities`: ["TEXT", "IMAGE"]
 - `imageConfig.aspectRatio`: "16:9" or "1:1"
-- `imageConfig.imageSize`: "1K", "2K", or "4K" (quality optimization)
+- `imageConfig.imageSize`: "1K", "2K", or "4K" (Nano Banana Pro only)
 
-**Prompt Structure** (Narrative format per Gemini best practices):
+**Prompt Structure** (Artistic visuals with negative prompts):
 ```
-Create a professional LinkedIn [dimension] image with a [layout] composition.
+Create a stunning LinkedIn [dimension] image.
 
-The scene features [background]. In the foreground, position [foreground].
-Use dramatic yet professional lighting with a subtle gradient glow emanating
-from the focal point. Frame with a slight wide-angle perspective.
+VISUAL STYLE: [style]. The mood is [mood].
 
-Render the headline text "[headline]" prominently in a clean, bold, modern
-sans-serif typeface. Below it, add "[subtitle]" in a lighter weight.
+COMPOSITION: [layout] layout with [background]. Add [foreground] for visual
+interest. Use cinematic lighting with soft shadows and subtle depth.
 
-Apply a [style] aesthetic. The color scheme uses [palette]. The mood: [mood].
+TEXT OVERLAY: Display "[headline]" as the main headline in large, bold,
+modern sans-serif typography. Below it, show "[subtitle]" in smaller text.
 
-This image accompanies a LinkedIn post about: [context]
+COLOR: Use professional colors that complement the content.
+
+CONTEXT: This accompanies a LinkedIn post about: [context]
+
+CRITICAL - DO NOT INCLUDE:
+- No diagrams, flowcharts, or charts
+- No neural networks, nodes, or connection lines
+- No code, terminals, or IDE screenshots
+- No icons, logos, or clip art
+- No busy infographics or data visualizations
+
+Create an artistic, premium quality image that looks like professional
+marketing material, not a technical diagram.
 ```
 
 **Key prompt optimizations:**
-- Narrative paragraphs (not bullet points) - official best practice
-- Photography terminology (lighting, camera perspective)
-- Descriptive font guidance
-- No markdown formatting in prompts
+- Clean gradient backgrounds (no technical elements)
+- Explicit negative prompts to avoid diagrams/charts/nodes
+- Focus on typography and artistic composition
+- Cinematic lighting and soft visual effects
 
 **Supported Dimensions**:
 | Dimension | Aspect Ratio | Image Size | Use Case |
@@ -68,12 +79,17 @@ This image accompanies a LinkedIn post about: [context]
 | `1080x1080` | 1:1 | 1K | Square |
 | `1200x1200` | 1:1 | 2K | Large square |
 
-**Image Styles**: 12 styles defined in `STYLE_AESTHETICS` dict
-- infographic, minimalist, conceptual, abstract
-- photorealistic, illustrated, diagram, gradient
-- flat_design, isometric, tech_themed, professional
+**Image Styles**: 12 styles in `STYLE_AESTHETICS` (artistic focus, no diagrams)
+- infographic (bold typography), minimalist (whitespace), conceptual (dreamlike)
+- abstract (flowing shapes), photorealistic (cinematic), illustrated (flat art)
+- diagram (clean layout), gradient (color meshes), flat_design (solid colors)
+- isometric (stylized 3D), tech_themed (neon glows), professional (refined)
 
-**Tech Color Palettes**: 30+ technologies with hex codes in `TECH_COLOR_PALETTES`
+**Layout Types**: 6 content-based layouts in `LAYOUT_TYPES`
+- All use gradient backgrounds and soft light effects
+- No technical elements (IDE, code, data visualization)
+
+**Tech Color Palettes**: 30+ technologies in `TECH_COLOR_PALETTES` (reference only)
 
 ### Project Insights System
 
