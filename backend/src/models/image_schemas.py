@@ -12,7 +12,7 @@ MAX_PROMPT_SIZE = 2 * 1024  # 2KB
 
 class ImageModel(str, Enum):
     """Available image generation models."""
-    NANO_BANANA_PRO = "gemini-3-pro-image"  # Nano Banana Pro (default)
+    NANO_BANANA_PRO = "gemini-3-pro-image-preview"  # Nano Banana Pro (default)
     IMAGEN_4_ULTRA = "imagen-4.0-ultra-generate-001"  # Imagen 4 Ultra
     IMAGEN_4_STANDARD = "imagen-4.0-generate-001"  # Imagen 4 Standard
     IMAGEN_4_FAST = "imagen-4.0-fast-generate-001"  # Imagen 4 Fast

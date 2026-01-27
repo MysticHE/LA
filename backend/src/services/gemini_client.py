@@ -77,7 +77,7 @@ class GeminiClient:
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
     # Default model for image generation (Nano Banana Pro)
-    DEFAULT_MODEL = "gemini-3-pro-image"
+    DEFAULT_MODEL = "gemini-3-pro-image-preview"
 
     # Default timeout in seconds
     DEFAULT_TIMEOUT = 60.0
@@ -149,7 +149,7 @@ class GeminiClient:
                 }]
             }],
             "generationConfig": {
-                "responseModalities": ["IMAGE"],
+                "responseModalities": ["TEXT", "IMAGE"],
                 "imageConfig": {
                     "aspectRatio": aspect_ratio
                 }

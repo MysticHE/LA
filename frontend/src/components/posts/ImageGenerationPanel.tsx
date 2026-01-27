@@ -52,7 +52,7 @@ type ImageDimensionId = (typeof IMAGE_DIMENSIONS)[number]["id"]
 
 // Image models for generation - matches ImageModel enum in backend
 const IMAGE_MODELS = [
-  { id: "gemini-3-pro-image" as ImageModelId, label: "Nano Banana Pro", description: "High quality, balanced speed" },
+  { id: "gemini-3-pro-image-preview" as ImageModelId, label: "Nano Banana Pro", description: "High quality, balanced speed" },
   { id: "imagen-4.0-ultra-generate-001" as ImageModelId, label: "Imagen 4 Ultra", description: "Highest quality, slower" },
   { id: "imagen-4.0-generate-001" as ImageModelId, label: "Imagen 4 Standard", description: "Good quality, moderate speed" },
   { id: "imagen-4.0-fast-generate-001" as ImageModelId, label: "Imagen 4 Fast", description: "Fast generation, good quality" },
@@ -77,7 +77,7 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
   const [selectedDimension, setSelectedDimension] = useState<ImageDimensionId>("1200x627")
 
   // Model selection state
-  const [selectedModel, setSelectedModel] = useState<ImageModelId>("gemini-3-pro-image")
+  const [selectedModel, setSelectedModel] = useState<ImageModelId>("gemini-3-pro-image-preview")
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
