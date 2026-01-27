@@ -30,6 +30,7 @@ from src.models.image_schemas import (
     ImageGenerationResponse,
     ImageDimensions,
     ImageStyle,
+    ImageModel,
     ContentType,
     MAX_POST_CONTENT_SIZE,
     MAX_PROMPT_SIZE,
@@ -178,6 +179,7 @@ async def generate_image(
         result = await client.generate_image(
             prompt=prompt,
             dimensions=image_request.dimensions.value,
+            model=image_request.model.value,
         )
 
         if result.success:

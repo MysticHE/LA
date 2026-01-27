@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAppStore } from "@/store/appStore"
-import { api, ApiError } from "@/lib/api"
+import { api, ApiError, type ImageModelId } from "@/lib/api"
 import { useCountdown } from "@/hooks/useCountdown"
 import { ImagePreview, type GeneratedImageData } from "./ImagePreview"
 
@@ -50,6 +50,15 @@ const IMAGE_DIMENSIONS = [
 
 type ImageDimensionId = (typeof IMAGE_DIMENSIONS)[number]["id"]
 
+// Image models for generation - matches ImageModel enum in backend
+const IMAGE_MODELS = [
+  { id: "gemini-3-pro-image" as ImageModelId, label: "Nano Banana Pro", description: "High quality, balanced speed" },
+  { id: "imagen-4.0-ultra-generate-001" as ImageModelId, label: "Imagen 4 Ultra", description: "Highest quality, slower" },
+  { id: "imagen-4.0-generate-001" as ImageModelId, label: "Imagen 4 Standard", description: "Good quality, moderate speed" },
+  { id: "imagen-4.0-fast-generate-001" as ImageModelId, label: "Imagen 4 Fast", description: "Fast generation, good quality" },
+  { id: "gemini-2.5-flash-image" as ImageModelId, label: "Nano Banana", description: "Fastest, efficient" },
+] as const
+
 interface ImageGenerationPanelProps {
   postContent: string
   /** Optional: compact mode for embedding in other components */
@@ -66,6 +75,9 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
 
   // Dimension selection state
   const [selectedDimension, setSelectedDimension] = useState<ImageDimensionId>("1200x627")
+
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState<ImageModelId>("gemini-3-pro-image")
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -86,6 +98,12 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
 
   const handleDimensionSelect = useCallback((dimensionId: ImageDimensionId) => {
     setSelectedDimension(dimensionId)
+    setError(null)
+    setIsRetryable(false)
+  }, [])
+
+  const handleModelSelect = useCallback((modelId: ImageModelId) => {
+    setSelectedModel(modelId)
     setError(null)
     setIsRetryable(false)
   }, [])
@@ -122,6 +140,7 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
         postContent,
         style: selectedStyle || undefined,
         dimensions: selectedDimension,
+        model: selectedModel,
       })
 
       if (response.success && response.image_base64) {
@@ -174,7 +193,7 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
       setIsGenerating(false)
       setAbortController(null)
     }
-  }, [postContent, selectedStyle, selectedDimension, geminiConnected, countdown])
+  }, [postContent, selectedStyle, selectedDimension, selectedModel, geminiConnected, countdown])
 
   const handleCancel = useCallback(() => {
     if (abortController) {
@@ -318,6 +337,44 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
                   {isSelected && (
                     <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
                   )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Model Selection */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Image Model</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {IMAGE_MODELS.map((model) => {
+              const isSelected = selectedModel === model.id
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => handleModelSelect(model.id)}
+                  disabled={isGenerating}
+                  className={`
+                    p-3 rounded-lg border-2 transition-all text-left
+                    ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }
+                    ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+                  `}
+                  aria-label={`Select ${model.label} model`}
+                  aria-pressed={isSelected}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{model.label}</p>
+                      {isSelected && (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{model.description}</p>
+                  </div>
                 </button>
               )
             })}

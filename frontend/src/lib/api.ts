@@ -211,11 +211,19 @@ export interface AIGenerateResponse {
 }
 
 // Image Generation Types
+export type ImageModelId =
+  | "gemini-3-pro-image"
+  | "imagen-4.0-ultra-generate-001"
+  | "imagen-4.0-generate-001"
+  | "imagen-4.0-fast-generate-001"
+  | "gemini-2.5-flash-image"
+
 export interface ImageGenerationRequest {
   postContent: string
   style?: string
   dimensions: string
   customPrompt?: string
+  model?: ImageModelId
 }
 
 export interface ImageGenerationResponse {
@@ -505,6 +513,9 @@ export const api = {
     }
     if (request.customPrompt) {
       requestBody.custom_prompt = request.customPrompt
+    }
+    if (request.model) {
+      requestBody.model = request.model
     }
 
     const response = await fetchWithTimeout(

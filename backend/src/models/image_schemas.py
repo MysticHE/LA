@@ -10,6 +10,15 @@ MAX_POST_CONTENT_SIZE = 10 * 1024  # 10KB
 MAX_PROMPT_SIZE = 2 * 1024  # 2KB
 
 
+class ImageModel(str, Enum):
+    """Available image generation models."""
+    NANO_BANANA_PRO = "gemini-3-pro-image"  # Nano Banana Pro (default)
+    IMAGEN_4_ULTRA = "imagen-4.0-ultra-generate-001"  # Imagen 4 Ultra
+    IMAGEN_4_STANDARD = "imagen-4.0-generate-001"  # Imagen 4 Standard
+    IMAGEN_4_FAST = "imagen-4.0-fast-generate-001"  # Imagen 4 Fast
+    NANO_BANANA = "gemini-2.5-flash-image"  # Nano Banana
+
+
 class ImageStyle(str, Enum):
     """Available image styles for LinkedIn post images."""
     INFOGRAPHIC = "infographic"
@@ -129,6 +138,10 @@ class ImageGenerationRequest(BaseModel):
     style: Optional[ImageStyle] = Field(
         None,
         description="Optional image style override"
+    )
+    model: ImageModel = Field(
+        default=ImageModel.NANO_BANANA_PRO,
+        description="Image generation model to use"
     )
 
     @field_validator("post_content")
