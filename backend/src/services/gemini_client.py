@@ -154,10 +154,17 @@ class GeminiClient:
         Args:
             prompt: The text prompt for image generation.
             aspect_ratio: Aspect ratio (e.g., "16:9", "1:1").
-            image_size: Output quality ("1K", "2K", "4K").
+            image_size: Output quality ("1K", "2K", "4K") - only for Nano Banana Pro.
             model_name: The Gemini model to use.
         """
         url = f"{self.BASE_URL}/models/{model_name}:generateContent"
+
+        # Build imageConfig based on model capabilities
+        # Nano Banana (gemini-2.5-flash-image) does NOT support imageSize
+        # Nano Banana Pro (gemini-3-pro-image-preview) supports imageSize
+        image_config: dict = {"aspectRatio": aspect_ratio}
+        if model_name == "gemini-3-pro-image-preview":
+            image_config["imageSize"] = image_size
 
         payload = {
             "contents": [{
@@ -167,10 +174,7 @@ class GeminiClient:
             }],
             "generationConfig": {
                 "responseModalities": ["TEXT", "IMAGE"],
-                "imageConfig": {
-                    "aspectRatio": aspect_ratio,
-                    "imageSize": image_size
-                }
+                "imageConfig": image_config
             }
         }
 
