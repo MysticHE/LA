@@ -455,34 +455,23 @@ class GeminiPromptBuilder:
         return content
 
     def _format_prompt(self, components: GeminiPromptComponents) -> str:
-        """Format the final Gemini-optimized prompt."""
-        prompt = f"""**Role:** Expert LinkedIn Visual Designer
-**Task:** Create a high-conversion image for a {components.dimension_desc}.
+        """Format the final Gemini-optimized prompt.
 
-**1. SCENE COMPOSITION:**
-Create a {components.layout_type} composition.
-- **Background:** {components.background}
-- **Foreground:** {components.foreground}
+        Uses narrative description style as recommended by official Gemini docs:
+        "Describe the scene, don't just list keywords."
+        """
+        # Build a flowing narrative prompt instead of structured bullet points
+        prompt = f"""Create a professional LinkedIn {components.dimension_desc} image with a {components.layout_type} composition.
 
-**2. TEXT RENDERING (Crucial):**
-You MUST render the following text clearly and legibly:
-- **Headline:** "{components.headline}" (Large, bold, high contrast)
-- **Sub-text:** "{components.subtitle}" (Smaller, secondary color)
-*Ensure text has high contrast against the background.*
+The scene features {components.background.lower()}. In the foreground, position {components.foreground.lower()}. Use dramatic yet professional lighting with a subtle gradient glow emanating from the focal point, creating depth and visual interest. Frame the composition with a slight wide-angle perspective to give the image an expansive, modern feel.
 
-**3. AESTHETIC & COLOR:**
-- **Style:** {components.style}
-- **Palette:** {components.palette}
-- **Mood:** {components.mood}
+Render the headline text "{components.headline}" prominently in a clean, bold, modern sans-serif typeface. Position it for maximum impact with strong contrast against the background. Below it, add the supporting text "{components.subtitle}" in a lighter weight of the same font family, using a secondary color that complements the palette.
 
-**4. CONTEXT:**
-The post is about: {components.context}
-Ensure the visual metaphors align with this topic.
+Apply a {components.style.lower()} aesthetic throughout. The color scheme uses {components.palette.lower()}. The overall mood should feel {components.mood.lower()}.
 
-**CONSTRAINTS:**
-- NO watermarks, signatures, or logos
-- NO stock photo artifacts or cheesy corporate imagery
-- Text must be sharp and readable"""
+This image accompanies a LinkedIn post about: {components.context}
+
+Technical requirements: The text must be crisp and perfectly legible. Avoid any watermarks, signatures, stock photo artifacts, or generic corporate imagery. Create an original, premium-quality visual that would stop someone mid-scroll on LinkedIn."""
 
         return prompt
 
