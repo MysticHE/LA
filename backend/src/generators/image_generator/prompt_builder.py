@@ -422,13 +422,11 @@ class GeminiPromptBuilder:
         """Format the final Gemini-optimized prompt.
 
         Uses narrative description style as recommended by official Gemini docs.
-        Focuses on artistic visuals, explicitly avoiding technical diagrams.
+        Focuses on artistic visuals with clean typography.
         """
         prompt = f"""Create a stunning LinkedIn {components.dimension_desc} image.
 
 VISUAL STYLE: {components.style}. The mood is {components.mood.lower()}.
-
-COMPOSITION: {components.layout_type} layout with {components.background.lower()}. Add {components.foreground.lower()} for visual interest. Use cinematic lighting with soft shadows and subtle depth.
 
 TEXT OVERLAY: Display "{components.headline}" as the main headline in large, bold, modern sans-serif typography. Below it, show "{components.subtitle}" in smaller, lighter text. Ensure text is crisp and highly readable with strong contrast.
 
@@ -436,15 +434,7 @@ COLOR: Use {components.palette.lower()} with rich, harmonious tones.
 
 CONTEXT: This accompanies a LinkedIn post about: {components.context}
 
-CRITICAL - DO NOT INCLUDE:
-- No diagrams, flowcharts, or charts
-- No neural networks, nodes, or connection lines
-- No code, terminals, or IDE screenshots
-- No icons, logos, or clip art
-- No busy infographics or data visualizations
-- No stock photo watermarks
-
-Create an artistic, premium quality image that looks like professional marketing material, not a technical diagram."""
+Create an artistic, premium quality image that looks like professional marketing material."""
 
         return prompt
 
