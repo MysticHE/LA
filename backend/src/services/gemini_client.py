@@ -29,6 +29,14 @@ DIMENSION_TO_ASPECT_RATIO = {
     "1200x1200": "1:1",    # Large square
 }
 
+# Map dimensions to optimal image sizes for quality
+# Official API supports: "1K", "2K", "4K"
+DIMENSION_TO_IMAGE_SIZE = {
+    "1200x627": "2K",      # Higher quality for link posts
+    "1080x1080": "1K",     # Standard for square
+    "1200x1200": "2K",     # Higher quality for large square
+}
+
 # Models that use the Imagen API (generateImages endpoint)
 IMAGEN_MODELS = {
     "imagen-4.0-ultra-generate-001",
@@ -126,20 +134,29 @@ class GeminiClient:
 
         model_name = model or self.DEFAULT_MODEL
         aspect_ratio = DIMENSION_TO_ASPECT_RATIO.get(dimensions, "16:9")
+        image_size = DIMENSION_TO_IMAGE_SIZE.get(dimensions, "2K")
 
         # Use different API based on model type
         if self._is_imagen_model(model_name):
             return await self._generate_with_imagen(prompt, aspect_ratio, model_name)
         else:
-            return await self._generate_with_gemini(prompt, aspect_ratio, model_name)
+            return await self._generate_with_gemini(prompt, aspect_ratio, image_size, model_name)
 
     async def _generate_with_gemini(
         self,
         prompt: str,
         aspect_ratio: str,
+        image_size: str,
         model_name: str,
     ) -> ImageGenerationResult:
-        """Generate image using Gemini API (generateContent endpoint)."""
+        """Generate image using Gemini API (generateContent endpoint).
+
+        Args:
+            prompt: The text prompt for image generation.
+            aspect_ratio: Aspect ratio (e.g., "16:9", "1:1").
+            image_size: Output quality ("1K", "2K", "4K").
+            model_name: The Gemini model to use.
+        """
         url = f"{self.BASE_URL}/models/{model_name}:generateContent"
 
         payload = {
@@ -151,7 +168,8 @@ class GeminiClient:
             "generationConfig": {
                 "responseModalities": ["TEXT", "IMAGE"],
                 "imageConfig": {
-                    "aspectRatio": aspect_ratio
+                    "aspectRatio": aspect_ratio,
+                    "imageSize": image_size
                 }
             }
         }
