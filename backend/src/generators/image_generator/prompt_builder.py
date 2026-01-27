@@ -22,88 +22,90 @@ from src.models.image_schemas import ImageStyle, ContentType, Sentiment
 
 
 # Layout types for scene composition based on content type
+# Focus on clean, artistic visuals - NO diagrams, charts, or technical elements
 LAYOUT_TYPES = {
     ContentType.TUTORIAL: {
-        "layout": "step-by-step instructional",
-        "background": "Clean workspace or IDE interface with subtle code elements",
-        "foreground": "Central learning pathway or progression visual with clear hierarchy",
+        "layout": "clean centered",
+        "background": "Smooth gradient from deep blue to purple",
+        "foreground": "Simple abstract shapes with soft glow effects",
     },
     ContentType.ANNOUNCEMENT: {
-        "layout": "bold central hero",
-        "background": "Dynamic gradient or abstract tech pattern",
-        "foreground": "Prominent 3D icon or symbol representing the announcement",
+        "layout": "bold centered",
+        "background": "Vibrant gradient with subtle light rays",
+        "foreground": "Clean geometric accent shapes",
     },
     ContentType.TIPS: {
-        "layout": "modern card grid",
-        "background": "Soft gradient with subtle geometric patterns",
-        "foreground": "Lightbulb or insight icon with organized tip indicators",
+        "layout": "balanced asymmetric",
+        "background": "Warm gradient with soft bokeh light effects",
+        "foreground": "Minimal decorative elements",
     },
     ContentType.STORY: {
-        "layout": "narrative journey",
-        "background": "Abstract path or timeline visualization",
-        "foreground": "Transformation visual showing before/after or growth arc",
+        "layout": "cinematic wide",
+        "background": "Atmospheric gradient with depth and dimension",
+        "foreground": "Subtle light streaks or lens flare accents",
     },
     ContentType.TECHNICAL: {
-        "layout": "modern professional",
-        "background": "Dark gradient with subtle tech-inspired geometric patterns",
-        "foreground": "Clean abstract 3D shapes or floating geometric elements",
+        "layout": "modern minimal",
+        "background": "Deep dark gradient transitioning to rich accent color",
+        "foreground": "Simple glowing orbs or soft light elements",
     },
     ContentType.CAREER: {
-        "layout": "aspirational upward",
-        "background": "Professional gradient with subtle corporate elements",
-        "foreground": "Rising graph, ladder, or achievement visual",
+        "layout": "uplifting diagonal",
+        "background": "Inspiring gradient from dark to bright",
+        "foreground": "Soft ascending light beams",
     },
 }
 
 # Style descriptors with aesthetic details
+# Focus on artistic visuals - avoid technical diagrams, charts, flowcharts, nodes
 STYLE_AESTHETICS = {
     ImageStyle.INFOGRAPHIC: {
-        "style": "Clean infographic design with organized data visualization",
-        "mood": "Informative, educational, data-driven",
+        "style": "Clean modern design with bold typography as the hero element",
+        "mood": "Clear, impactful, professional",
     },
     ImageStyle.MINIMALIST: {
-        "style": "Minimalist design with ample negative space and essential elements only",
-        "mood": "Elegant, sophisticated, focused",
+        "style": "Ultra-minimal design with generous whitespace and one focal element",
+        "mood": "Elegant, sophisticated, premium",
     },
     ImageStyle.CONCEPTUAL: {
-        "style": "Conceptual illustration with metaphorical imagery and symbolic objects",
-        "mood": "Thought-provoking, creative, insightful",
+        "style": "Artistic composition with dreamlike atmosphere and soft focus",
+        "mood": "Thought-provoking, creative, inspiring",
     },
     ImageStyle.ABSTRACT: {
-        "style": "Abstract art with flowing shapes, fluid gradients, and artistic patterns",
-        "mood": "Innovative, artistic, forward-thinking",
+        "style": "Fluid abstract art with organic flowing shapes and rich color blending",
+        "mood": "Innovative, artistic, expressive",
     },
     ImageStyle.PHOTOREALISTIC: {
-        "style": "Photorealistic 3D rendering with cinematic lighting and depth",
-        "mood": "Authentic, professional, trustworthy",
+        "style": "Cinematic photography style with dramatic lighting and shallow depth of field",
+        "mood": "Authentic, premium, editorial",
     },
     ImageStyle.ILLUSTRATED: {
-        "style": "Modern illustration with stylized elements and artistic texture",
-        "mood": "Friendly, approachable, creative",
+        "style": "Modern flat illustration with smooth curves and vibrant colors",
+        "mood": "Friendly, approachable, engaging",
     },
     ImageStyle.DIAGRAM: {
-        "style": "Clean technical illustration with organized structure and clear hierarchy",
-        "mood": "Technical, systematic, educational",
+        "style": "Clean structured layout with clear visual hierarchy and bold text",
+        "mood": "Organized, clear, educational",
     },
     ImageStyle.GRADIENT: {
-        "style": "Modern gradient design with smooth color transitions and glassmorphism",
-        "mood": "Modern, dynamic, energetic",
+        "style": "Rich gradient meshes with smooth color transitions and glass effects",
+        "mood": "Modern, dynamic, vibrant",
     },
     ImageStyle.FLAT_DESIGN: {
-        "style": "Flat design with bold geometric shapes, solid colors, and clean icons",
-        "mood": "Modern, clean, accessible",
+        "style": "Bold flat design with solid color blocks and simple shapes",
+        "mood": "Modern, clean, bold",
     },
     ImageStyle.ISOMETRIC: {
-        "style": "Premium 3D isometric illustration with precise 30-degree angles",
-        "mood": "Technical, dimensional, organized",
+        "style": "Stylized 3D perspective with clean lines and solid colors",
+        "mood": "Modern, dimensional, polished",
     },
     ImageStyle.TECH_THEMED: {
-        "style": "Premium 3D isometric illustration, glassmorphism UI elements, neon accents",
-        "mood": "Innovative, cutting-edge, high-tech",
+        "style": "Futuristic aesthetic with neon glows and dark moody atmosphere",
+        "mood": "Innovative, cutting-edge, bold",
     },
     ImageStyle.PROFESSIONAL: {
-        "style": "Corporate professional design with refined imagery and subtle patterns",
-        "mood": "Trustworthy, professional, established",
+        "style": "Corporate elegance with refined gradients and sophisticated typography",
+        "mood": "Trustworthy, established, premium",
     },
 }
 
@@ -298,19 +300,8 @@ class GeminiPromptBuilder:
         technologies: list[str],
         visual_elements: list[str],
     ) -> str:
-        """Enhance background description with tech context."""
-        enhancements = []
-
-        if technologies:
-            tech_str = ", ".join(technologies[:2])
-            enhancements.append(f"featuring {tech_str} elements")
-
-        if visual_elements:
-            elem_str = ", ".join(visual_elements[:2])
-            enhancements.append(f"with {elem_str}")
-
-        if enhancements:
-            return f"{base_background}, {', '.join(enhancements)}"
+        """Return base background without adding technical elements."""
+        # Don't add tech references - they cause diagram-like outputs
         return base_background
 
     def _enhance_foreground(
@@ -319,15 +310,8 @@ class GeminiPromptBuilder:
         technologies: list[str],
         keywords: list[str],
     ) -> str:
-        """Enhance foreground description with specific elements."""
-        if technologies:
-            main_tech = technologies[0]
-            return f"{base_foreground} representing {main_tech}"
-
-        if keywords:
-            main_keyword = keywords[0]
-            return f"{base_foreground} symbolizing {main_keyword}"
-
+        """Return base foreground without adding technical elements."""
+        # Don't add tech/keyword references - they cause diagram-like outputs
         return base_foreground
 
     def _clean_markdown(self, text: str) -> str:
@@ -437,21 +421,30 @@ class GeminiPromptBuilder:
     def _format_prompt(self, components: GeminiPromptComponents) -> str:
         """Format the final Gemini-optimized prompt.
 
-        Uses narrative description style as recommended by official Gemini docs:
-        "Describe the scene, don't just list keywords."
+        Uses narrative description style as recommended by official Gemini docs.
+        Focuses on artistic visuals, explicitly avoiding technical diagrams.
         """
-        # Build a flowing narrative prompt instead of structured bullet points
-        prompt = f"""Create a professional LinkedIn {components.dimension_desc} image with a {components.layout_type} composition.
+        prompt = f"""Create a stunning LinkedIn {components.dimension_desc} image.
 
-The scene features {components.background.lower()}. In the foreground, position {components.foreground.lower()}. Use dramatic yet professional lighting with a subtle gradient glow emanating from the focal point, creating depth and visual interest. Frame the composition with a slight wide-angle perspective to give the image an expansive, modern feel.
+VISUAL STYLE: {components.style}. The mood is {components.mood.lower()}.
 
-Render the headline text "{components.headline}" prominently in a clean, bold, modern sans-serif typeface. Position it for maximum impact with strong contrast against the background. Below it, add the supporting text "{components.subtitle}" in a lighter weight of the same font family, using a secondary color that complements the palette.
+COMPOSITION: {components.layout_type} layout with {components.background.lower()}. Add {components.foreground.lower()} for visual interest. Use cinematic lighting with soft shadows and subtle depth.
 
-Apply a {components.style.lower()} aesthetic throughout. The color scheme uses {components.palette.lower()}. The overall mood should feel {components.mood.lower()}.
+TEXT OVERLAY: Display "{components.headline}" as the main headline in large, bold, modern sans-serif typography. Below it, show "{components.subtitle}" in smaller, lighter text. Ensure text is crisp and highly readable with strong contrast.
 
-This image accompanies a LinkedIn post about: {components.context}
+COLOR: Use {components.palette.lower()} with rich, harmonious tones.
 
-Technical requirements: The text must be crisp and perfectly legible. Avoid any watermarks, signatures, stock photo artifacts, or generic corporate imagery. Create an original, premium-quality visual that would stop someone mid-scroll on LinkedIn."""
+CONTEXT: This accompanies a LinkedIn post about: {components.context}
+
+CRITICAL - DO NOT INCLUDE:
+- No diagrams, flowcharts, or charts
+- No neural networks, nodes, or connection lines
+- No code, terminals, or IDE screenshots
+- No icons, logos, or clip art
+- No busy infographics or data visualizations
+- No stock photo watermarks
+
+Create an artistic, premium quality image that looks like professional marketing material, not a technical diagram."""
 
         return prompt
 
