@@ -12,6 +12,7 @@ Transform your GitHub projects into engaging LinkedIn posts with AI-powered cont
   - Problem-Solution: Present your project as the solution to a relatable problem
   - Tips & Learnings: Share key insights and lessons learned
   - Technical Showcase: Highlight architecture and tech decisions
+- **Editable Generated Content**: Edit AI-generated posts before copying or generating images
 - **Secure API Key Management**: Client-side encrypted key storage with session expiry
 - **Rate Limiting & Security**: Built-in rate limiting and security headers
 
@@ -197,11 +198,13 @@ Automatically detects potential gaps:
 Uses **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`) - also known as "Nano Banana Pro" - for high-quality LinkedIn post images.
 
 ### Supported Dimensions
-| Format | Dimensions | Aspect Ratio | Use Case |
-|--------|------------|--------------|----------|
-| Link Post (default) | 1200x627 | 16:9 | Standard link preview |
-| Square | 1080x1080 | 1:1 | Engagement posts |
-| Large Square | 1200x1200 | 1:1 | Detailed visuals |
+| Format | Dimensions | Aspect Ratio | Image Size | Use Case |
+|--------|------------|--------------|------------|----------|
+| Link Post (default) | 1200x627 | 16:9 | 2K | Standard link preview |
+| Square | 1080x1080 | 1:1 | 1K | Engagement posts |
+| Large Square | 1200x1200 | 1:1 | 2K | Detailed visuals |
+
+*Image Size parameter optimizes output quality per Gemini API best practices.*
 
 ### Image Styles
 12 professionally designed styles:
@@ -280,28 +283,34 @@ Detected technologies in your post can influence style recommendations:
 - If no style is selected, the first recommended style is used automatically
 - Recommendations are shown with "AI" badges in the UI for guidance
 
-### Prompt Structure
+### Prompt Structure (Narrative Format)
+
+Following Gemini's official best practice of "describe the scene, don't just list keywords", prompts use flowing narrative paragraphs:
 
 ```
-**Role:** Expert LinkedIn Visual Designer
-**Task:** Create a high-conversion image for a link post (1200x627).
+Create a professional LinkedIn link post image with a [layout] composition.
 
-**1. SCENE COMPOSITION:**
-- Background: [context-aware with tech elements]
-- Foreground: [focal point representing topic]
+The scene features [background description]. In the foreground, position
+[foreground elements]. Use dramatic yet professional lighting with a subtle
+gradient glow emanating from the focal point, creating depth and visual
+interest. Frame the composition with a slight wide-angle perspective.
 
-**2. TEXT RENDERING:**
-- Headline: "[extracted from post]"
-- Sub-text: "[keywords]"
+Render the headline text "[headline]" prominently in a clean, bold, modern
+sans-serif typeface. Position it for maximum impact with strong contrast
+against the background. Below it, add the supporting text "[subtitle]" in
+a lighter weight of the same font family.
 
-**3. AESTHETIC & COLOR:**
-- Style: [selected style]
-- Palette: Deep background (#hex) with accent (#hex)
-- Mood: [professional mood]
+Apply a [style] aesthetic throughout. The color scheme uses [palette with
+hex codes]. The overall mood should feel [mood description].
 
-**4. CONTEXT:**
-The post is about: [summary]
+This image accompanies a LinkedIn post about: [context summary]
 ```
+
+**Key prompt optimizations:**
+- Narrative paragraphs instead of bullet points
+- Photography terminology (lighting, camera perspective)
+- Descriptive font guidance ("clean, bold, modern sans-serif")
+- No markdown formatting in prompts
 
 ### Tech-Specific Color Palettes
 Auto-detects technologies and applies brand colors:

@@ -28,38 +28,45 @@ linkedin-content-automation/
 **Model**: `gemini-3-pro-image-preview` (Nano Banana Pro)
 
 **Files**:
-- `backend/src/services/gemini_client.py` - Gemini API client
-- `backend/src/generators/image_generator/prompt_builder.py` - Prompt construction
+- `backend/src/services/gemini_client.py` - Gemini API client with imageSize optimization
+- `backend/src/generators/image_generator/prompt_builder.py` - Narrative prompt construction
 - `backend/src/generators/image_generator/style_recommender.py` - Style selection
 - `backend/src/api/image_routes.py` - API endpoints
 - `frontend/src/components/posts/ImageGenerationPanel.tsx` - UI
 
-**Prompt Structure** (Gemini-optimized):
+**API Parameters** (per official Gemini docs):
+- `responseModalities`: ["TEXT", "IMAGE"]
+- `imageConfig.aspectRatio`: "16:9" or "1:1"
+- `imageConfig.imageSize`: "1K", "2K", or "4K" (quality optimization)
+
+**Prompt Structure** (Narrative format per Gemini best practices):
 ```
-**Role:** Expert LinkedIn Visual Designer
-**Task:** Create a high-conversion image for a [dimension].
+Create a professional LinkedIn [dimension] image with a [layout] composition.
 
-**1. SCENE COMPOSITION:**
-- Background: [context with tech elements]
-- Foreground: [focal point]
+The scene features [background]. In the foreground, position [foreground].
+Use dramatic yet professional lighting with a subtle gradient glow emanating
+from the focal point. Frame with a slight wide-angle perspective.
 
-**2. TEXT RENDERING:**
-- Headline: "[from post]"
-- Sub-text: "[keywords]"
+Render the headline text "[headline]" prominently in a clean, bold, modern
+sans-serif typeface. Below it, add "[subtitle]" in a lighter weight.
 
-**3. AESTHETIC & COLOR:**
-- Style: [selected]
-- Palette: [hex codes]
-- Mood: [professional]
+Apply a [style] aesthetic. The color scheme uses [palette]. The mood: [mood].
 
-**4. CONTEXT:**
-The post is about: [summary]
+This image accompanies a LinkedIn post about: [context]
 ```
+
+**Key prompt optimizations:**
+- Narrative paragraphs (not bullet points) - official best practice
+- Photography terminology (lighting, camera perspective)
+- Descriptive font guidance
+- No markdown formatting in prompts
 
 **Supported Dimensions**:
-- `1200x627` (default) - Link post, 16:9
-- `1080x1080` - Square, 1:1
-- `1200x1200` - Large square, 1:1
+| Dimension | Aspect Ratio | Image Size | Use Case |
+|-----------|--------------|------------|----------|
+| `1200x627` | 16:9 | 2K | Link post (default) |
+| `1080x1080` | 1:1 | 1K | Square |
+| `1200x1200` | 1:1 | 2K | Large square |
 
 **Image Styles**: 12 styles defined in `STYLE_AESTHETICS` dict
 - infographic, minimalist, conceptual, abstract
@@ -107,8 +114,19 @@ Edit `backend/src/analyzers/insights_analyzer.py`:
 1. `ContentAnalyzer` - Extracts themes, technologies, keywords, sentiment
 2. `ContentClassifier` - Classifies into: Tutorial, Announcement, Tips, Story, Technical, Career
 3. `StyleRecommender` - Recommends image style based on content type + tech stack
-4. `GeminiPromptBuilder` - Builds optimized prompt from all components
+4. `GeminiPromptBuilder` - Builds narrative prompts from all components (cleans markdown from text)
 5. `InsightsAnalyzer` - Detects project strengths, highlights, and considerations
+
+### Post Generation
+
+**Prompts** (`backend/prompts/`):
+- `problem_solution.md` - Problem-Solution format
+- `tips_learnings.md` - Tips & Learnings format
+- `technical_showcase.md` - Technical Showcase format
+
+All prompts include: `**IMPORTANT: Do NOT use markdown formatting (no asterisks, no bold, no italics). Write plain text only.**`
+
+**Editable Content**: Generated posts are editable in the UI before copying or image generation (`frontend/src/components/posts/GeneratedContentPreview.tsx`)
 
 ### AI Providers
 
@@ -185,6 +203,11 @@ TECH_COLOR_PALETTES["newtool"] = {
 
 ### Modify Prompt Structure
 Edit `_format_prompt()` in `backend/src/generators/image_generator/prompt_builder.py`
+
+Note: Prompts use narrative format per Gemini best practices. Avoid reverting to bullet-point structure.
+
+### Prevent Markdown in AI Posts
+All post generation prompts (`backend/prompts/*.md`) include instruction to not use markdown formatting. The `prompt_builder.py` also has `_clean_markdown()` to strip asterisks from text before image generation.
 
 ## API Endpoints
 
