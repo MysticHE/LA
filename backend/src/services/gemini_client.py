@@ -200,15 +200,16 @@ class GeminiClient:
         aspect_ratio: str,
         model_name: str,
     ) -> ImageGenerationResult:
-        """Generate image using Imagen API (generateImages endpoint)."""
-        url = f"{self.BASE_URL}/models/{model_name}:generateImages"
+        """Generate image using Imagen API (predict endpoint)."""
+        url = f"{self.BASE_URL}/models/{model_name}:predict"
 
         payload = {
-            "prompt": prompt,
-            "config": {
-                "numberOfImages": 1,
-                "aspectRatio": aspect_ratio,
-                "outputMimeType": "image/png"
+            "instances": [
+                {"prompt": prompt}
+            ],
+            "parameters": {
+                "sampleCount": 1,
+                "aspectRatio": aspect_ratio
             }
         }
 
@@ -321,7 +322,7 @@ class GeminiClient:
     def _extract_image_from_imagen_response(self, data: dict) -> Optional[str]:
         """Extract base64 image data from Imagen API response.
 
-        Imagen API returns: {"generatedImages": [{"image": {"imageBytes": "..."}}]}
+        Imagen API returns: {"predictions": [{"bytesBase64Encoded": "...", "mimeType": "image/png"}]}
 
         Args:
             data: The JSON response from the API.
@@ -330,13 +331,12 @@ class GeminiClient:
             Base64-encoded image string or None if not found.
         """
         try:
-            generated_images = data.get("generatedImages", [])
-            if not generated_images:
+            predictions = data.get("predictions", [])
+            if not predictions:
                 return None
 
-            first_image = generated_images[0]
-            image_data = first_image.get("image", {})
-            image_bytes = image_data.get("imageBytes")
+            first_prediction = predictions[0]
+            image_bytes = first_prediction.get("bytesBase64Encoded")
 
             if image_bytes:
                 return image_bytes
