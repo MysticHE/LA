@@ -8,10 +8,10 @@ Transform your GitHub projects into engaging LinkedIn posts with AI-powered cont
 - **Project Insights**: Auto-detect strengths and considerations with merged features & highlights in a clean 2x2 grid layout
 - **Multi-Provider AI Generation**: Generate posts using Claude, OpenAI, or Gemini
 - **AI Image Generation**: Create professional visuals using Gemini 3 Pro Image (Nano Banana Pro)
-- **3 Post Styles**:
-  - Problem-Solution: Present your project as the solution to a relatable problem
-  - Tips & Learnings: Share key insights and lessons learned
-  - Technical Showcase: Highlight architecture and tech decisions
+- **3 Post Styles** (with value-first prompts):
+  - Problem-Solution: Frustration-first hooks that resonate with developers
+  - Tips & Learnings: Counterintuitive insights and "I was wrong about..." hooks
+  - Technical Showcase: "Why I didn't use X" and trade-off discussions
 - **Editable Generated Content**: Edit AI-generated posts before copying or generating images
 - **Secure API Key Management**: Client-side encrypted key storage with session expiry
 - **Rate Limiting & Security**: Built-in rate limiting and security headers
@@ -213,6 +213,59 @@ The Project Analysis feature automatically analyzes repositories and presents in
 - Strips HTML tags (`<p>`, `<img>`, etc.)
 - Strips markdown images and links
 - AI-powered summary when OpenAI is connected
+
+## Post Generation System
+
+### Value-First Framework
+
+The AI prompt generator uses a **Value Framework** to drive engagement:
+
+| Principle | Bad Example | Good Example |
+|-----------|-------------|--------------|
+| **Frustration-First Hook** | "I built a tool that does X" | "Tired of spending 2 hours configuring webpack?" |
+| **3-Step Value Rule** | "Features real-time sync" | "Runs locally → Process sensitive data → Zero security risk" |
+| **Active Voice** | "It has...", "It provides..." | "You can now...", "Say goodbye to..." |
+| **Outcome Over Feature** | "Features real-time sync" | "Never lose work to a browser crash again" |
+
+### Post Styles
+
+Each style includes a **PRE-WRITING CHECKLIST** to guide the AI:
+
+| Style | Hook Type | Key Question |
+|-------|-----------|--------------|
+| **Problem-Solution** | Frustration statement | "What specific frustration does this solve?" |
+| **Tips & Learnings** | Counterintuitive insight | "What SURPRISED you while building this?" |
+| **Technical Showcase** | Surprising metric or contrarian choice | "Why didn't you use [popular thing]?" |
+
+### Audience Inference
+
+The system automatically infers target audience from tech stack:
+
+| Tech Stack | Inferred Audience |
+|------------|-------------------|
+| React, Vue, Angular, Next.js | Frontend developers |
+| FastAPI, Django, Express, Flask | Backend developers |
+| Docker, Kubernetes, Terraform | DevOps engineers |
+| OpenAI, LangChain, Claude | AI/ML engineers |
+| CLI tools, terminal keywords | Terminal workflow developers |
+
+### Prompt Structure
+
+The user prompt includes a **"SO WHAT?" Framework**:
+
+```
+Think about:
+- What tedious task does this eliminate?
+- What risky process does this make safe?
+- What expensive thing does this make free?
+- What complex thing does this make simple?
+```
+
+Features are presented with value prompts:
+```
+- Feature Name: Description
+  → Think: What problem does this solve? What can the user now do?
+```
 
 ## AI Image Generation
 

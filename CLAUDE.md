@@ -161,10 +161,37 @@ Edit `backend/src/analyzers/insights_analyzer.py`:
 
 ### Post Generation
 
-**Prompts** (`backend/prompts/`):
-- `problem_solution.md` - Problem-Solution format
-- `tips_learnings.md` - Tips & Learnings format
-- `technical_showcase.md` - Technical Showcase format
+**Files**:
+- `backend/src/generators/ai_prompt_generator.py` - Main prompt builder with Value Framework
+- `backend/prompts/*.md` - Style-specific templates
+
+**Value Framework** (in `VALUE_FRAMEWORK` constant):
+1. **Frustration-First Hook**: Open with pain point, not "I built..."
+2. **3-Step Value Rule**: Feature → Use Case → Benefit for every feature
+3. **Active Voice**: "You can now..." not "It has..."
+4. **Outcome Over Feature**: Lead with what reader gains
+
+**Style Instructions** (in `STYLE_INSTRUCTIONS`):
+| Style | Hook Type | Structure |
+|-------|-----------|-----------|
+| Problem-Solution | Frustration statement | Hook → Agitate → Solution → Value Proof → CTA |
+| Tips & Learnings | "I was wrong about..." | Hook → Context → Lessons (mistake/learned/do) → Takeaway → CTA |
+| Technical Showcase | Contrarian choice or metric | Hook → Problem → Approach → Trade-off → Result → CTA |
+
+**Audience Inference** (`_infer_audience()` method):
+- Detects frontend/backend/DevOps/AI engineers from tech stack
+- Identifies CLI/API/type-safety audiences from description
+- Returns top 3 relevant audiences for targeting
+
+**User Prompt Structure** (`_build_user_prompt()`):
+- "SO WHAT?" Framework with audience hints
+- Features limited to top 5 with value prompts
+- Critical instruction to avoid "I built..." hooks
+
+**Prompt Templates** (`backend/prompts/`):
+- `problem_solution.md` - PRE-WRITING CHECKLIST + frustration-first structure
+- `tips_learnings.md` - PRE-WRITING CHECKLIST + counterintuitive hook structure
+- `technical_showcase.md` - PRE-WRITING CHECKLIST + trade-off discussion structure
 
 All prompts include: `**IMPORTANT: Do NOT use markdown formatting (no asterisks, no bold, no italics). Write plain text only.**`
 
@@ -247,6 +274,20 @@ TECH_COLOR_PALETTES["newtool"] = {
 Edit `_format_prompt()` in `backend/src/generators/image_generator/prompt_builder.py`
 
 Note: Prompts use narrative format per Gemini best practices. Avoid reverting to bullet-point structure.
+
+### Modify Post Generation Prompts
+Edit `backend/src/generators/ai_prompt_generator.py`:
+- `VALUE_FRAMEWORK` - Core engagement rules (frustration-first, active voice, etc.)
+- `STYLE_INSTRUCTIONS` - Per-style structure and hooks
+- `_infer_audience()` - Add new audience detection patterns
+- `_build_user_prompt()` - Modify the "SO WHAT?" framework
+
+### Add New Audience Detection
+Edit `_infer_audience()` in `backend/src/generators/ai_prompt_generator.py`:
+```python
+if any(t in tech_names for t in ["new-tech", "another-tech"]):
+    audiences.append("new audience type")
+```
 
 ### Prevent Markdown in AI Posts
 All post generation prompts (`backend/prompts/*.md`) include instruction to not use markdown formatting. The `prompt_builder.py` also has `_clean_markdown()` to strip asterisks from text before image generation.
