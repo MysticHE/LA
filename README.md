@@ -4,8 +4,8 @@ Transform your GitHub projects into engaging LinkedIn posts with AI-powered cont
 
 ## Features
 
-- **GitHub Repository Analysis**: Extract tech stack, features, and README content
-- **Project Insights**: Auto-detect strengths, highlights, and considerations (AI integrations, deployment platforms, architecture patterns)
+- **GitHub Repository Analysis**: Extract tech stack, features, and README content with AI-powered summaries
+- **Project Insights**: Auto-detect strengths and considerations with merged features & highlights in a clean 2x2 grid layout
 - **Multi-Provider AI Generation**: Generate posts using Claude, OpenAI, or Gemini
 - **AI Image Generation**: Create professional visuals using Gemini 3 Pro Image (Nano Banana Pro)
 - **3 Post Styles**:
@@ -161,17 +161,34 @@ linkedin-content-automation/
 - Security headers (CSP, XSS protection, etc.)
 - No API keys stored on server permanently
 
-## Project Insights
+## Project Analysis
 
-The Project Insights feature automatically analyzes repositories and generates reader-friendly insights categorized into three types:
+The Project Analysis feature automatically analyzes repositories and presents information in a clean 2x2 grid layout:
 
-### Insight Categories
+### UI Layout
 
-| Category | Color | Description |
-|----------|-------|-------------|
-| **Strengths** | Green | What makes the project well-designed (deployment, architecture, monitoring) |
-| **Highlights** | Blue | Notable integrations and capabilities (AI, payments, real-time features) |
-| **Considerations** | Amber | Areas to note or potential improvements |
+```
+┌─────────────────────┬─────────────────────┐
+│     Tech Stack      │  Features &         │
+│   [Badge] [Badge]   │  Highlights         │
+├─────────────────────┼─────────────────────┤
+│     Strengths       │   Considerations    │
+│  (green theme)      │   (amber theme)     │
+└─────────────────────┴─────────────────────┘
+┌─────────────────────────────────────────────┐
+│ 📝 Summary: AI-generated or README excerpt  │
+└─────────────────────────────────────────────┘
+```
+
+### Features
+
+| Section | Description |
+|---------|-------------|
+| **Tech Stack** | Detected languages, frameworks, libraries, and tools with color-coded badges |
+| **Features & Highlights** | Merged list of README features + detected highlights (AI, payments, real-time) |
+| **Strengths** | What makes the project well-designed (deployment, architecture, monitoring) |
+| **Considerations** | Areas to note or potential improvements |
+| **Summary** | AI-generated summary (when OpenAI connected) or cleaned README excerpt |
 
 ### Detection Categories
 
@@ -185,12 +202,17 @@ The Project Insights feature automatically analyzes repositories and generates r
 | Data & Storage | PostgreSQL, MongoDB, Redis, S3, PlanetScale |
 | Business Model | SaaS patterns, Multi-tenant, Admin Dashboard, API-first |
 
-### Consideration Detection
+### Automatic Detection
 
-Automatically detects potential gaps:
+**Consideration Detection** - Automatically detects potential gaps:
 - No authentication detected
 - No database found
 - No deployment configuration
+
+**Summary Generation** - Clean text extraction:
+- Strips HTML tags (`<p>`, `<img>`, etc.)
+- Strips markdown images and links
+- AI-powered summary when OpenAI is connected
 
 ## AI Image Generation
 

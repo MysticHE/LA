@@ -91,18 +91,38 @@ marketing material, not a technical diagram.
 
 **Tech Color Palettes**: 30+ technologies in `TECH_COLOR_PALETTES` (reference only)
 
-### Project Insights System
+### Project Analysis System
 
 **Files**:
-- `backend/src/models/schemas.py` - `InsightType` enum, `ProjectInsight` model
+- `backend/src/models/schemas.py` - `InsightType` enum, `ProjectInsight` model, `AnalysisResult` with `ai_summary`
+- `backend/src/analyzers/github_analyzer.py` - Main analyzer with AI summary, feature merging, HTML stripping
 - `backend/src/analyzers/insights_analyzer.py` - Pattern detection logic
-- `frontend/src/components/analysis/AnalysisCard.tsx` - Accordion UI display
-- `frontend/src/components/ui/accordion.tsx` - Radix accordion component
+- `frontend/src/components/analysis/AnalysisCard.tsx` - 2x2 grid UI display
 
-**Insight Types**:
-- `strength` - Platform, architecture, monitoring (green)
-- `highlight` - AI, payments, real-time, UX features (blue)
-- `consideration` - Missing auth, database, deployment (amber)
+**UI Layout** (2x2 Grid + Summary Footer):
+```
+┌─────────────────────┬─────────────────────┐
+│     Tech Stack      │  Features &         │
+│   [Badge] [Badge]   │  Highlights         │
+├─────────────────────┼─────────────────────┤
+│     Strengths       │   Considerations    │
+│  (green theme)      │   (amber theme)     │
+└─────────────────────┴─────────────────────┘
+┌─────────────────────────────────────────────┐
+│ 📝 Summary: AI-generated or README excerpt  │
+└─────────────────────────────────────────────┘
+```
+
+**Data Flow**:
+- `features` field: Merged README features + highlight insights (de-duplicated, max 8)
+- `insights` field: Only strengths + considerations (highlights merged into features)
+- `ai_summary` field: AI-generated summary when OpenAI connected, falls back to `readme_summary`
+- `readme_summary` field: HTML/markdown stripped excerpt from README
+
+**Insight Types** (displayed in UI):
+- `strength` - Platform, architecture, monitoring (green card)
+- `consideration` - Missing auth, database, deployment (amber card)
+- `highlight` - Merged into Features & Highlights section (not shown as insight)
 
 **Detection Categories** (7 total):
 1. Platform & Deployment - Vercel, Netlify, AWS, Docker, Supabase, Firebase
@@ -124,6 +144,12 @@ Edit `backend/src/analyzers/insights_analyzer.py`:
     "type": InsightType.STRENGTH,  # or HIGHLIGHT, CONSIDERATION
 }
 ```
+
+**HTML/Markdown Stripping** (`_summarize_readme()`):
+- Strips HTML tags: `<p>`, `<img>`, etc.
+- Strips markdown images: `![alt](url)`
+- Strips markdown links but keeps text: `[text](url)` → `text`
+- Strips HTML entities and URLs
 
 ### Content Analysis Pipeline
 
