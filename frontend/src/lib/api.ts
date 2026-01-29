@@ -133,10 +133,11 @@ export interface AnalysisResult {
   forks: number
   language: string | null
   tech_stack: TechStackItem[]
-  features: Feature[]
-  readme_summary: string | null
+  features: Feature[]  // Merged features + highlights
+  readme_summary: string | null  // Fallback text summary
+  ai_summary: string | null  // AI-generated summary
   file_structure: string[]
-  insights: ProjectInsight[]
+  insights: ProjectInsight[]  // Only strengths + considerations
 }
 
 export interface GeneratedPrompt {

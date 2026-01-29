@@ -1,14 +1,28 @@
 import re
 import os
+import logging
 from typing import Optional, TYPE_CHECKING
 from github import Github, GithubException
-from src.models.schemas import AnalysisResult, TechStackItem, Feature
+from src.models.schemas import AnalysisResult, TechStackItem, Feature, InsightType
 from src.analyzers.code_analyzer import CodeAnalyzer
 from src.analyzers.feature_extractor import FeatureExtractor
 from src.analyzers.insights_analyzer import InsightsAnalyzer
 
 if TYPE_CHECKING:
     from src.services.openai_client import OpenAIClient
+
+logger = logging.getLogger(__name__)
+
+
+AI_SUMMARY_PROMPT = """Summarize this GitHub project in 1-2 sentences for a LinkedIn audience.
+
+Project: {repo_name}
+Description: {description}
+Tech Stack: {tech_stack}
+README excerpt: {readme_excerpt}
+
+Write a compelling, concise summary (under 150 characters) that captures what makes this project interesting.
+Return ONLY the summary text, no quotes or explanation."""
 
 
 class GitHubAnalyzer:
@@ -73,6 +87,25 @@ class GitHubAnalyzer:
             readme=readme_content,
         )
 
+        # Merge features with highlight insights (de-duplicate)
+        merged_features = self._merge_features_and_highlights(
+            features=features,
+            insights=insights,
+        )
+
+        # Filter insights to only Strengths and Considerations
+        filtered_insights = [
+            i for i in insights if i.type != InsightType.HIGHLIGHT
+        ]
+
+        # Generate AI summary if client available
+        ai_summary = self._generate_ai_summary(
+            repo_name=repo.name,
+            description=repo.description,
+            tech_stack=tech_stack,
+            readme=readme_content,
+        )
+
         return AnalysisResult(
             repo_name=repo.name,
             description=repo.description,
@@ -80,10 +113,11 @@ class GitHubAnalyzer:
             forks=repo.forks_count,
             language=repo.language,
             tech_stack=tech_stack,
-            features=features,
+            features=merged_features,
             readme_summary=readme_summary,
+            ai_summary=ai_summary,
             file_structure=file_structure[:50],
-            insights=insights,
+            insights=filtered_insights,
         )
 
     def _get_readme(self, repo) -> Optional[str]:
@@ -148,11 +182,22 @@ class GitHubAnalyzer:
         return contents
 
     def _summarize_readme(self, readme: Optional[str]) -> Optional[str]:
-        """Extract first meaningful paragraph from README."""
+        """Extract first meaningful paragraph from README with HTML/markdown stripped."""
         if not readme:
             return None
 
-        lines = readme.split("\n")
+        # Strip HTML tags
+        text = re.sub(r"<[^>]+>", "", readme)
+        # Strip markdown images ![alt](url)
+        text = re.sub(r"!\[[^\]]*\]\([^)]+\)", "", text)
+        # Strip markdown links but keep text [text](url) -> text
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        # Strip HTML entities
+        text = re.sub(r"&[a-zA-Z]+;", " ", text)
+        # Strip badge URLs and shields.io references
+        text = re.sub(r"https?://[^\s]+", "", text)
+
+        lines = text.split("\n")
         summary_lines = []
         in_content = False
 
@@ -173,6 +218,74 @@ class GitHubAnalyzer:
                     break
 
         summary = " ".join(summary_lines)
+        # Clean up multiple spaces
+        summary = re.sub(r"\s+", " ", summary).strip()
         if len(summary) > 500:
             summary = summary[:497] + "..."
         return summary if summary else None
+
+    def _generate_ai_summary(
+        self,
+        repo_name: str,
+        description: Optional[str],
+        tech_stack: list[TechStackItem],
+        readme: Optional[str],
+    ) -> Optional[str]:
+        """Generate an AI summary for the project."""
+        if not self.openai_client:
+            return None
+
+        try:
+            tech_stack_str = ", ".join([t.name for t in tech_stack[:10]]) or "Not specified"
+            readme_excerpt = (readme[:1500] if readme else "") or "No README available"
+
+            prompt = AI_SUMMARY_PROMPT.format(
+                repo_name=repo_name,
+                description=description or "No description",
+                tech_stack=tech_stack_str,
+                readme_excerpt=readme_excerpt,
+            )
+
+            result = self.openai_client.generate_content(
+                system_prompt="You are a technical writer creating concise project summaries. Return only the summary text.",
+                user_prompt=prompt,
+            )
+
+            if result.success and result.content:
+                summary = result.content.strip().strip('"').strip("'")
+                if len(summary) > 200:
+                    summary = summary[:197] + "..."
+                return summary
+            return None
+        except Exception as e:
+            logger.debug("AI summary generation failed: %s", str(e))
+            return None
+
+    def _merge_features_and_highlights(
+        self,
+        features: list[Feature],
+        insights: list,
+    ) -> list[Feature]:
+        """Merge features with highlight insights, de-duplicating by title."""
+        merged = []
+        seen_titles: set[str] = set()
+
+        # Add features first (higher priority - from README)
+        for f in features:
+            normalized = f.name.lower().strip()
+            if normalized not in seen_titles:
+                merged.append(f)
+                seen_titles.add(normalized)
+
+        # Add highlights that don't duplicate features
+        for insight in insights:
+            if insight.type != InsightType.HIGHLIGHT:
+                continue
+            normalized = insight.title.lower().strip()
+            if normalized not in seen_titles:
+                merged.append(
+                    Feature(name=insight.title, description=insight.description)
+                )
+                seen_titles.add(normalized)
+
+        return merged[:8]  # Limit to 8 items

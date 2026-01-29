@@ -58,10 +58,11 @@ class AnalysisResult(BaseModel):
     forks: int
     language: Optional[str]
     tech_stack: list[TechStackItem]
-    features: list[Feature]
-    readme_summary: Optional[str]
+    features: list[Feature]  # Merged features + highlights
+    readme_summary: Optional[str]  # Fallback text summary
+    ai_summary: Optional[str] = None  # AI-generated summary
     file_structure: list[str]
-    insights: list[ProjectInsight] = []
+    insights: list[ProjectInsight] = []  # Only strengths + considerations
 
 
 class GenerateRequest(BaseModel):
