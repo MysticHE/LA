@@ -261,6 +261,68 @@ async def generate_image(
         )
 
 
+@router.post("/image/recommend")
+async def get_style_recommendations(
+    request: Request,
+    post_content: dict
+) -> dict:
+    """Get AI-recommended image styles based on post content.
+
+    Analyzes the content and returns recommended styles without generating an image.
+    This allows the UI to show recommendations before the user makes a selection.
+
+    Args:
+        request: The FastAPI request object.
+        post_content: Dict with 'content' field containing the post text.
+
+    Returns:
+        Dict with recommended styles and content type.
+
+    Raises:
+        HTTPException: 400 for invalid inputs.
+    """
+    content = post_content.get("content", "").strip()
+
+    if not content:
+        return {
+            "styles": [],
+            "content_type": None,
+            "tech_influenced": False,
+        }
+
+    # Validate content size
+    if len(content.encode("utf-8")) > MAX_POST_CONTENT_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Post content exceeds maximum size of {MAX_POST_CONTENT_SIZE} bytes"
+        )
+
+    # Analyze the post content
+    analyzer = get_content_analyzer()
+    try:
+        analysis = analyzer.analyze(content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Classify the content type
+    classifier = get_content_classifier()
+    classification = classifier.classify(analysis, content)
+
+    # Get style recommendations
+    recommender = get_style_recommender()
+    recommendation = recommender.recommend(
+        classification.content_type,
+        analysis.technologies,
+        analysis
+    )
+
+    return {
+        "styles": recommendation.styles[:3],  # Return top 3 recommendations
+        "content_type": classification.content_type.value,
+        "tech_influenced": recommendation.tech_influenced,
+    }
+
+
 @router.post("/image/validate")
 async def validate_image_request(
     request: Request,

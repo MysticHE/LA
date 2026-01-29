@@ -241,6 +241,12 @@ export interface ImageGenerationResponse {
   retry_after?: number
 }
 
+export interface StyleRecommendationResponse {
+  styles: string[]
+  content_type: string | null
+  tech_influenced: boolean
+}
+
 export const api = {
   async analyzeRepo(url: string, token?: string): Promise<ApiResponse<AnalysisResult>> {
     const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -502,6 +508,31 @@ export const api = {
         style: style,
         error: getUserFriendlyError(errorMessage),
       }
+    }
+
+    return response.json()
+  },
+
+  // Style Recommendation API
+  async getStyleRecommendations(postContent: string): Promise<StyleRecommendationResponse> {
+    if (!postContent.trim()) {
+      return { styles: [], content_type: null, tech_influenced: false }
+    }
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/generate/image/recommend`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: postContent }),
+      },
+      10000 // 10 second timeout for recommendations
+    )
+
+    if (!response.ok) {
+      return { styles: [], content_type: null, tech_influenced: false }
     }
 
     return response.json()

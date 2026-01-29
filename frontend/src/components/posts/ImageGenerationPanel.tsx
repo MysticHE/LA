@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ImageIcon,
@@ -89,6 +89,40 @@ export function ImageGenerationPanel({ postContent, compact: _compact = false }:
   const [abortController, setAbortController] = useState<AbortController | null>(null)
 
   const geminiConnected = geminiAuth.isConnected
+
+  // Debounce ref for recommendations
+  const recommendationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Fetch style recommendations when post content changes
+  useEffect(() => {
+    // Clear any pending timeout
+    if (recommendationTimeoutRef.current) {
+      clearTimeout(recommendationTimeoutRef.current)
+    }
+
+    // Don't fetch if no content or already generating
+    if (!postContent.trim() || isGenerating) {
+      return
+    }
+
+    // Debounce the API call (500ms delay)
+    recommendationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.getStyleRecommendations(postContent)
+        if (response.styles && response.styles.length > 0) {
+          setRecommendedStyles(response.styles)
+        }
+      } catch {
+        // Silently fail - recommendations are optional
+      }
+    }, 500)
+
+    return () => {
+      if (recommendationTimeoutRef.current) {
+        clearTimeout(recommendationTimeoutRef.current)
+      }
+    }
+  }, [postContent, isGenerating])
 
   const handleStyleSelect = useCallback((styleId: ImageStyleId) => {
     setSelectedStyle(styleId)
