@@ -1,7 +1,15 @@
 """Analyzer for generating reader-friendly project insights."""
 
-from typing import Optional
+import json
+import logging
+from typing import Optional, TYPE_CHECKING
+
 from src.models.schemas import ProjectInsight, InsightType, TechStackItem
+
+if TYPE_CHECKING:
+    from src.services.openai_client import OpenAIClient
+
+logger = logging.getLogger(__name__)
 
 
 PLATFORM_PATTERNS: list[dict] = [
@@ -345,7 +353,44 @@ ALL_PATTERNS = (
 
 
 class InsightsAnalyzer:
-    """Analyzes project to generate reader-friendly insights."""
+    """Analyzes project to generate reader-friendly insights.
+
+    Supports AI-powered analysis with fallback to pattern matching.
+    """
+
+    # AI prompt for insights analysis
+    INSIGHTS_PROMPT = """Analyze this project for LinkedIn-worthy insights.
+
+README (truncated):
+{readme}
+
+Tech Stack: {tech_stack}
+
+File Structure Sample: {file_structure}
+
+Identify project insights and categorize them:
+- "strength": Robust capabilities that show technical maturity (deployment, monitoring, architecture patterns, testing)
+- "highlight": Notable features that make the project interesting (AI integration, real-time features, payments, unique functionality)
+- "consideration": Areas for improvement or things to note (missing auth, no database, limited deployment options)
+
+Return a JSON array:
+[{{"type": "strength|highlight|consideration", "title": "Short Title (2-4 words)", "description": "One sentence description", "icon": "single emoji"}}]
+
+Guidelines:
+- Focus on what would impress or interest a LinkedIn audience
+- Be specific to this project, not generic
+- Return 3-8 most relevant insights
+- Each description should be concise (under 80 characters)
+
+Return ONLY the JSON array, no explanation."""
+
+    def __init__(self, ai_client: Optional["OpenAIClient"] = None):
+        """Initialize the insights analyzer.
+
+        Args:
+            ai_client: Optional AI client for enhanced analysis.
+        """
+        self.ai_client = ai_client
 
     def analyze(
         self,
@@ -353,8 +398,157 @@ class InsightsAnalyzer:
         file_contents: dict[str, str],
         file_structure: list[str],
         primary_language: Optional[str] = None,
+        readme: Optional[str] = None,
     ) -> list[ProjectInsight]:
-        """Analyze project and return insights."""
+        """Analyze project and return insights.
+
+        Uses AI analysis if available and README is provided, falls back to pattern matching.
+        """
+        # Try AI analysis first if client and README are available
+        if self.ai_client and readme:
+            ai_result = self._analyze_with_ai(tech_stack, readme, file_structure)
+            if ai_result:
+                return ai_result
+
+        # Fallback to pattern matching
+        return self._analyze_with_patterns(
+            tech_stack, file_contents, file_structure, primary_language
+        )
+
+    def _analyze_with_ai(
+        self,
+        tech_stack: list[TechStackItem],
+        readme: str,
+        file_structure: list[str],
+    ) -> Optional[list[ProjectInsight]]:
+        """Analyze project insights using AI.
+
+        Args:
+            tech_stack: List of detected technologies.
+            readme: README content.
+            file_structure: List of file paths.
+
+        Returns:
+            List of ProjectInsight or None if AI analysis fails.
+        """
+        try:
+            # Prepare tech stack string
+            tech_stack_str = ", ".join([t.name for t in tech_stack]) or "Not specified"
+
+            # Truncate README for token efficiency
+            truncated_readme = readme[:4000] if len(readme) > 4000 else readme
+
+            # Sample file structure (limit to 50 items)
+            file_structure_sample = "\n".join(file_structure[:50])
+
+            prompt = self.INSIGHTS_PROMPT.format(
+                readme=truncated_readme,
+                tech_stack=tech_stack_str,
+                file_structure=file_structure_sample,
+            )
+
+            result = self.ai_client.generate_content(
+                system_prompt="You are a technical analyst identifying LinkedIn-worthy project insights. Return only valid JSON.",
+                user_prompt=prompt,
+            )
+
+            if not result.success or not result.content:
+                logger.debug("AI insights analysis failed: %s", result.error)
+                return None
+
+            # Parse JSON response
+            insights = self._parse_ai_response(result.content)
+            if insights:
+                logger.debug("AI insights analysis returned %d items", len(insights))
+                return insights
+
+            return None
+
+        except Exception as e:
+            logger.debug("AI insights analysis error: %s", str(e))
+            return None
+
+    def _parse_ai_response(self, response: str) -> Optional[list[ProjectInsight]]:
+        """Parse AI response into ProjectInsight list."""
+        try:
+            # Try to extract JSON from response
+            response = response.strip()
+
+            # Handle markdown code blocks
+            if response.startswith("```"):
+                lines = response.split("\n")
+                json_lines = []
+                in_block = False
+                for line in lines:
+                    if line.startswith("```"):
+                        in_block = not in_block
+                        continue
+                    if in_block:
+                        json_lines.append(line)
+                response = "\n".join(json_lines)
+
+            # Find JSON array in response
+            start = response.find("[")
+            end = response.rfind("]") + 1
+            if start == -1 or end == 0:
+                return None
+
+            json_str = response[start:end]
+            data = json.loads(json_str)
+
+            if not isinstance(data, list):
+                return None
+
+            insights = []
+            seen_titles = set()
+            type_map = {
+                "strength": InsightType.STRENGTH,
+                "highlight": InsightType.HIGHLIGHT,
+                "consideration": InsightType.CONSIDERATION,
+            }
+
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+
+                title = item.get("title", "").strip()
+                description = item.get("description", "").strip()
+                icon = item.get("icon", "📌").strip()
+                insight_type_str = item.get("type", "highlight").strip().lower()
+
+                if not title or not description or title in seen_titles:
+                    continue
+
+                insight_type = type_map.get(insight_type_str, InsightType.HIGHLIGHT)
+
+                # Ensure icon is a single character/emoji
+                if len(icon) > 4:
+                    icon = "📌"
+
+                insights.append(
+                    ProjectInsight(
+                        type=insight_type,
+                        title=title,
+                        description=description,
+                        icon=icon,
+                    )
+                )
+                seen_titles.add(title)
+
+            return insights if insights else None
+
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.debug("Failed to parse AI insights response: %s", str(e))
+            return None
+
+    def _analyze_with_patterns(
+        self,
+        tech_stack: list[TechStackItem],
+        file_contents: dict[str, str],
+        file_structure: list[str],
+        primary_language: Optional[str] = None,
+    ) -> list[ProjectInsight]:
+        """Analyze project insights using pattern matching (fallback)."""
         insights: list[ProjectInsight] = []
         seen_titles: set[str] = set()
 

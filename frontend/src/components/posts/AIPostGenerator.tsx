@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from "react"
-import { Sparkles, AlertCircle, Key, Clock, RefreshCw, Bot } from "lucide-react"
+import { Sparkles, AlertCircle, Key, Clock, RefreshCw, Bot, User, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppStore } from "@/store/appStore"
-import { api, ApiError, type AnalysisResult, type AIGenerateResponse, type AIProvider } from "@/lib/api"
+import { api, ApiError, type AnalysisResult, type AIGenerateResponse, type AIProvider, type RepositoryOwnership } from "@/lib/api"
 import { GeneratedContentPreview } from "./GeneratedContentPreview"
 import { useCountdown } from "@/hooks/useCountdown"
 
@@ -36,6 +36,7 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
   const countdown = useCountdown()
 
   const [selectedStyle, setSelectedStyle] = useState<PostStyle>("problem-solution")
+  const [ownership, setOwnership] = useState<RepositoryOwnership | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedContents, setGeneratedContents] = useState<Record<PostStyle, GeneratedContent | null>>({
     "problem-solution": null,
@@ -80,6 +81,12 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
       return
     }
 
+    if (!ownership) {
+      setError("Please select repository ownership (My Project or Discovered).")
+      setIsRetryable(false)
+      return
+    }
+
     // Don't allow generation during rate limit countdown
     if (countdown.isActive) {
       return
@@ -94,7 +101,9 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
       const response: AIGenerateResponse = await api.generateAIPost(
         analysis,
         style,
-        selectedProvider
+        selectedProvider,
+        undefined,
+        ownership
       )
 
       if (response.success && response.content) {
@@ -130,7 +139,7 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [analysis, anyProviderConnected, selectedProvider, countdown])
+  }, [analysis, anyProviderConnected, selectedProvider, ownership, countdown])
 
   const handleStyleChange = (value: string) => {
     setSelectedStyle(value as PostStyle)
@@ -156,6 +165,15 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
     setIsRetryable(false)
     countdown.reset()
   }
+
+  const handleOwnershipSelect = (value: RepositoryOwnership) => {
+    setOwnership(value)
+    setError(null)
+    setIsRetryable(false)
+  }
+
+  // Determine if generate button should be enabled
+  const canGenerate = ownership !== null && selectedProvider !== null
 
   // Get current provider label for display
   const currentProviderLabel = selectedProvider ? PROVIDER_LABELS[selectedProvider] : "AI"
@@ -233,6 +251,46 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
           </div>
         )}
 
+        {/* Repository Ownership Selector - Required */}
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-dashed">
+          <div>
+            <span className="text-sm font-medium">Repository Ownership</span>
+            <p className="text-xs text-muted-foreground">
+              {ownership === null
+                ? "Select before generating"
+                : ownership === "own"
+                  ? "Writing as the author"
+                  : "Sharing a discovered project"}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={ownership === "own" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleOwnershipSelect("own")}
+              disabled={isGenerating}
+              className="gap-1"
+              aria-label="Select My Project ownership"
+              aria-pressed={ownership === "own"}
+            >
+              <User className="h-4 w-4" />
+              My Project
+            </Button>
+            <Button
+              variant={ownership === "discovered" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleOwnershipSelect("discovered")}
+              disabled={isGenerating}
+              className="gap-1"
+              aria-label="Select Discovered ownership"
+              aria-pressed={ownership === "discovered"}
+            >
+              <Search className="h-4 w-4" />
+              Discovered
+            </Button>
+          </div>
+        </div>
+
         <Tabs value={selectedStyle} onValueChange={handleStyleChange}>
           <TabsList className="grid w-full grid-cols-3">
             {POST_STYLES.map((style) => (
@@ -287,7 +345,7 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
                   </p>
                   <Button
                     onClick={() => handleGenerate(style.id)}
-                    disabled={isGenerating || countdown.isActive || !selectedProvider}
+                    disabled={isGenerating || countdown.isActive || !canGenerate}
                   >
                     {selectedProvider === "openai" ? (
                       <Bot className="h-4 w-4" />
@@ -296,7 +354,9 @@ export function AIPostGenerator({ analysis }: AIPostGeneratorProps) {
                     )}
                     {countdown.isActive
                       ? `Wait ${countdown.secondsLeft}s`
-                      : `Generate with ${currentProviderLabel}`}
+                      : !ownership
+                        ? "Select ownership first"
+                        : `Generate with ${currentProviderLabel}`}
                   </Button>
                 </div>
               )}

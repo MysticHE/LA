@@ -30,6 +30,12 @@ class PostStyle(str, Enum):
     TECHNICAL_SHOWCASE = "technical-showcase"
 
 
+class RepositoryOwnership(str, Enum):
+    """Whether the user owns the repository or discovered it."""
+    OWN = "own"
+    DISCOVERED = "discovered"
+
+
 class AnalyzeRequest(BaseModel):
     url: str = Field(..., description="GitHub repository URL")
     token: Optional[str] = Field(None, description="GitHub token for private repos")

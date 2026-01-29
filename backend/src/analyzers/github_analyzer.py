@@ -19,10 +19,11 @@ class GitHubAnalyzer:
     ):
         self.token = token or os.getenv("GITHUB_TOKEN")
         self.github = Github(self.token) if self.token else Github()
-        self.code_analyzer = CodeAnalyzer()
-        self.feature_extractor = FeatureExtractor()
-        self.insights_analyzer = InsightsAnalyzer()
         self.openai_client = openai_client
+        # Pass AI client to analyzers for enhanced analysis
+        self.code_analyzer = CodeAnalyzer(ai_client=openai_client)
+        self.feature_extractor = FeatureExtractor()
+        self.insights_analyzer = InsightsAnalyzer(ai_client=openai_client)
 
     def _parse_repo_url(self, url: str) -> tuple[str, str]:
         """Extract owner and repo name from GitHub URL."""
@@ -69,6 +70,7 @@ class GitHubAnalyzer:
             file_contents=repo_contents,
             file_structure=file_structure,
             primary_language=repo.language,
+            readme=readme_content,
         )
 
         return AnalysisResult(

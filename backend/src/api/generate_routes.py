@@ -65,7 +65,8 @@ async def generate_ai_post(
     # Generate prompts using the AI prompt generator
     system_prompt, user_prompt = AIPromptGenerator.generate_prompt(
         analysis=request.analysis,
-        style=request.style
+        style=request.style,
+        ownership=request.ownership,
     )
 
     # Create client and generate content based on provider

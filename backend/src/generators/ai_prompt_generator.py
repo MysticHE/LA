@@ -4,11 +4,30 @@ This module builds system prompts and user prompts for Claude to generate
 LinkedIn posts based on repository analysis and selected post style.
 """
 
-from src.models.schemas import AnalysisResult, PostStyle
+from src.models.schemas import AnalysisResult, PostStyle, RepositoryOwnership
 
 
 class AIPromptGenerator:
     """Generate prompts for Claude AI to create LinkedIn posts."""
+
+    # Ownership-specific instructions for perspective
+    OWNERSHIP_INSTRUCTIONS = {
+        RepositoryOwnership.OWN: """
+IMPORTANT - AUTHOR PERSPECTIVE:
+You are the author/creator of this project. Write from first-person author perspective.
+- Use phrases like "I built...", "My project...", "I created...", "When I was building..."
+- Share personal motivations, decisions, and challenges you faced
+- Call-to-action: Star the repo, try it out, contribute, give feedback
+""",
+        RepositoryOwnership.DISCOVERED: """
+IMPORTANT - DISCOVERER PERSPECTIVE:
+You discovered this amazing project created by someone else. Write from discoverer perspective.
+- Use phrases like "I found...", "I came across...", "Check out this project by..."
+- Give credit to the original author(s) and their work
+- Explain why this project is worth sharing and what impressed you
+- Call-to-action: Follow the creator, give it a star, check out their work
+""",
+    }
 
     # Style-specific instructions for Claude
     STYLE_INSTRUCTIONS = {
@@ -61,29 +80,43 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
 """
 
     @classmethod
-    def generate_prompt(cls, analysis: AnalysisResult, style: PostStyle) -> tuple[str, str]:
+    def generate_prompt(
+        cls,
+        analysis: AnalysisResult,
+        style: PostStyle,
+        ownership: RepositoryOwnership = RepositoryOwnership.OWN,
+    ) -> tuple[str, str]:
         """Generate system and user prompts for Claude.
 
         Args:
             analysis: The repository analysis result.
             style: The post style to use.
+            ownership: Whether user owns or discovered the project.
 
         Returns:
             Tuple of (system_prompt, user_prompt).
         """
-        system_prompt = cls.SYSTEM_PROMPT + cls.STYLE_INSTRUCTIONS.get(style, "")
+        system_prompt = cls.SYSTEM_PROMPT
+        system_prompt += cls.STYLE_INSTRUCTIONS.get(style, "")
+        system_prompt += cls.OWNERSHIP_INSTRUCTIONS.get(ownership, "")
 
-        user_prompt = cls._build_user_prompt(analysis, style)
+        user_prompt = cls._build_user_prompt(analysis, style, ownership)
 
         return system_prompt, user_prompt
 
     @classmethod
-    def _build_user_prompt(cls, analysis: AnalysisResult, style: PostStyle) -> str:
+    def _build_user_prompt(
+        cls,
+        analysis: AnalysisResult,
+        style: PostStyle,
+        ownership: RepositoryOwnership = RepositoryOwnership.OWN,
+    ) -> str:
         """Build the user prompt with analysis data.
 
         Args:
             analysis: The repository analysis result.
             style: The post style to use.
+            ownership: Whether user owns or discovered the project.
 
         Returns:
             The user prompt string.
@@ -104,8 +137,15 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
             PostStyle.TECHNICAL_SHOWCASE: "Technical Showcase",
         }.get(style, style.value)
 
+        ownership_context = (
+            "You are the AUTHOR of this project."
+            if ownership == RepositoryOwnership.OWN
+            else "You DISCOVERED this project (you did NOT create it)."
+        )
+
         prompt = f"""Write a LinkedIn post about this GitHub project:
 
+**Ownership**: {ownership_context}
 **Project Name**: {analysis.repo_name}
 **Description**: {analysis.description or 'Not provided'}
 **Primary Language**: {analysis.language or 'Not specified'}
@@ -121,6 +161,6 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
 **Post Style**: {style_name}
 
 Generate an engaging LinkedIn post following the {style_name} format.
-Make it personal and authentic, as if a developer is sharing their project with their network.
+Remember to write from the correct perspective based on the ownership context above.
 """
         return prompt

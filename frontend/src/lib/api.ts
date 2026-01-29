@@ -196,6 +196,9 @@ export interface GeminiStatusResponse {
 // AI Provider Type
 export type AIProvider = 'claude' | 'openai'
 
+// Repository Ownership Type
+export type RepositoryOwnership = 'own' | 'discovered'
+
 // AI Generation Types
 export interface AIGenerateRequest {
   analysis: AnalysisResult
@@ -442,9 +445,10 @@ export const api = {
     analysis: AnalysisResult,
     style: string,
     provider: AIProvider = 'claude',
-    model?: string
+    model?: string,
+    ownership: RepositoryOwnership = 'own'
   ): Promise<AIGenerateResponse> {
-    const requestBody: Record<string, unknown> = { analysis, style, provider }
+    const requestBody: Record<string, unknown> = { analysis, style, provider, ownership }
     if (model) {
       requestBody.model = model
     }

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
-from .schemas import AnalysisResult, PostStyle, Provider
+from .schemas import AnalysisResult, PostStyle, Provider, RepositoryOwnership
 from .openai_schemas import OpenAIModel
 
 
@@ -59,6 +59,10 @@ class ClaudeGenerateRequest(BaseModel):
     model: Optional[OpenAIModel] = Field(
         default=None,
         description="OpenAI model to use when provider is 'openai'. Ignored for Claude."
+    )
+    ownership: RepositoryOwnership = Field(
+        default=RepositoryOwnership.OWN,
+        description="Whether this is your own project or one you discovered"
     )
 
 
