@@ -18,13 +18,19 @@ Based on the following GitHub project analysis, write an engaging LinkedIn post:
 
 Write a LinkedIn post (max 3000 characters) in **technical showcase format**:
 
+## PRE-WRITING CHECKLIST:
+Before writing, answer these:
+1. What technical decision would make another developer say "oh that's clever"?
+2. What popular approach did you NOT use, and why?
+3. What trade-off did you make that was worth it?
+
 ## Structure:
-1. **Hook** (1-2 sentences) - Lead with the most impressive technical achievement or architecture decision
-2. **Tech Stack Overview** (2-3 sentences) - Highlight the key technologies and why they were chosen
-3. **Architecture Highlights** (3-5 bullet points) - Explain interesting design patterns, optimizations, or technical decisions
-4. **Challenges & Solutions** (2-3 sentences) - Share a specific technical challenge and how you solved it
-5. **Results/Metrics** (if applicable) - Performance numbers, code quality metrics, etc.
-6. **Call to Action** - Invite technical discussion or feedback
+1. **Hook** (1-2 sentences) - Lead with a surprising metric OR "Here's why I didn't use [popular thing]"
+2. **The Problem** (2-3 sentences) - What technical challenge did this solve? Be specific
+3. **The Approach** (3-5 bullet points) - Key architecture decisions WITH reasoning
+4. **The Trade-off** (1-2 sentences) - What did you sacrifice and why it was worth it
+5. **The Result** (1-2 sentences) - Concrete outcomes (speed, maintainability, developer experience)
+6. **Call to Action** - Invite debate ("Would you have done it differently?")
 
 ## Guidelines:
 - Be specific about technical decisions (don't just list technologies)

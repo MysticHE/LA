@@ -15,12 +15,18 @@ Based on the following GitHub project analysis, write an engaging LinkedIn post:
 
 Write a LinkedIn post (max 3000 characters) in **problem-solution format**:
 
+## PRE-WRITING CHECKLIST:
+Before writing, answer these:
+1. What specific frustration does this solve? (Be concrete: "debugging CORS", "managing .env files", "writing boilerplate")
+2. Who feels this pain most? (junior devs? enterprise teams? solo founders?)
+3. What's the "before and after"? (Before: 2 hours configuring. After: 5 minutes.)
+
 ## Structure:
-1. **Hook** (1-2 sentences) - Start with a relatable problem, frustration, or question that your target audience faces
-2. **Context** (1-2 sentences) - Brief background on why this problem matters
-3. **Solution** (2-3 sentences) - Introduce your project as the solution, what it does
-4. **Key Insights** (3-5 bullet points) - Highlight the most valuable features or learnings
-5. **Call to Action** - Ask an engaging question to spark discussion
+1. **Hook** (1-2 sentences) - Start with the FRUSTRATION, not the solution. Make the reader nod and say "yes, that annoys me too"
+2. **Agitate** (1-2 sentences) - Describe the consequences (wasted time, bugs, security risks)
+3. **Solution** (2-3 sentences) - Introduce your project as the answer
+4. **Value Proof** (3-5 bullet points) - Each feature with its USE CASE and BENEFIT
+5. **Call to Action** - Ask about THEIR experience with this problem
 
 ## Guidelines:
 - Write in first person, conversational tone

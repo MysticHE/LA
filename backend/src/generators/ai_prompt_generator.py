@@ -7,6 +7,35 @@ LinkedIn posts based on repository analysis and selected post style.
 from src.models.schemas import AnalysisResult, PostStyle, RepositoryOwnership
 
 
+VALUE_FRAMEWORK = """
+ENGAGEMENT RULES (CRITICAL - Apply to EVERY post):
+
+1. FRUSTRATION-FIRST HOOK
+   Before writing, identify the 3 most frustrating problems developers face that this project solves.
+   Use the STRONGEST frustration as your opening hook.
+   Bad: "I built a tool that does X"
+   Good: "Tired of spending 2 hours configuring webpack every project?"
+
+2. THE 3-STEP VALUE RULE
+   For EVERY feature you mention, include:
+   - Feature: What it does
+   - Use Case: A specific real-world scenario
+   - Benefit: The outcome (time saved, risk eliminated, capability unlocked)
+
+   Example: "Runs locally (feature) → Process sensitive client data (use case) → Zero security risk (benefit)"
+
+3. ACTIVE VOICE ONLY
+   Replace passive phrases:
+   ❌ "It has...", "Included is...", "There is...", "It provides..."
+   ✅ "You can now...", "Say goodbye to...", "Finally...", "Stop wasting time on..."
+
+4. OUTCOME OVER FEATURE
+   Lead with what the reader GAINS, not what the tool HAS.
+   ❌ "Features real-time sync"
+   ✅ "Never lose work to a browser crash again"
+"""
+
+
 class AIPromptGenerator:
     """Generate prompts for Claude AI to create LinkedIn posts."""
 
@@ -33,33 +62,50 @@ You discovered this amazing project created by someone else. Write from discover
     STYLE_INSTRUCTIONS = {
         PostStyle.PROBLEM_SOLUTION: """
 You are writing a LinkedIn post in the Problem-Solution style.
+
+BEFORE WRITING: Identify the 3 biggest frustrations your target audience has. Pick the most painful one for your hook.
+
 Structure:
-1. Start with a hook that identifies a relatable problem developers face
-2. Build tension by describing the impact of the problem
-3. Introduce the project as the solution
-4. Highlight 2-3 key features that address the problem
-5. End with a call-to-action (check it out, star on GitHub, etc.)
-Tone: Empathetic, professional, solution-focused
+1. HOOK: Start with a frustration statement the reader has experienced (NOT "I built...")
+2. AGITATE: Describe the consequences of this problem (wasted time, security risks, missed deadlines)
+3. SOLUTION: Introduce the project as the answer
+4. VALUE PROOF: Show 2-3 features WITH their real-world use cases and benefits
+5. CTA: Ask a question that invites them to share their own frustrations
+
+Tone: Empathetic, relatable, solution-focused
+Example hook: "How many hours have you lost debugging CORS errors this month?"
 """,
         PostStyle.TIPS_LEARNINGS: """
 You are writing a LinkedIn post in the Tips & Learnings style.
+
+BEFORE WRITING: Think about what SURPRISED you while building this. What did you learn that others might not know?
+
 Structure:
-1. Start with "Here's what I learned building [project]..." or similar
-2. Share 3-5 specific, actionable insights or lessons
-3. Use numbered lists or bullet points for readability
-4. Include both technical and non-technical learnings
-5. End with encouragement for others on similar journeys
-Tone: Reflective, educational, humble
+1. HOOK: Start with a counterintuitive insight or "I was wrong about..." statement
+2. CONTEXT: Brief setup (1-2 sentences about what you were building)
+3. LESSONS: 3-5 tips, each structured as:
+   - The mistake/assumption I made
+   - What I learned
+   - What you should do instead
+4. TAKEAWAY: The one thing to remember
+5. CTA: "What's the most surprising thing you learned building [related topic]?"
+
+Tone: Reflective, vulnerable, educational
 """,
         PostStyle.TECHNICAL_SHOWCASE: """
 You are writing a LinkedIn post in the Technical Showcase style.
+
+BEFORE WRITING: What technical decision would make another developer say "oh that's clever"?
+
 Structure:
-1. Open with an impressive technical achievement or metric
-2. Briefly describe the architecture and key technologies
-3. Highlight interesting technical decisions and trade-offs
-4. Share performance metrics or technical capabilities if available
-5. Invite technical discussions or questions
-Tone: Technical but accessible, enthusiastic about the tech
+1. HOOK: Lead with a surprising metric OR a "Here's why I didn't use [popular thing]"
+2. THE PROBLEM: What technical challenge did this solve? (Be specific)
+3. THE APPROACH: Key architecture decisions WITH reasoning
+4. THE TRADE-OFF: What did you sacrifice and why it was worth it
+5. THE RESULT: Concrete outcomes (speed, maintainability, developer experience)
+6. CTA: Invite debate ("Would you have done it differently?")
+
+Tone: Technical but conversational, confident but open to discussion
 """,
     }
 
@@ -77,7 +123,7 @@ Guidelines:
 - End with a clear call-to-action or question to drive engagement
 
 IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
-"""
+""" + VALUE_FRAMEWORK
 
     @classmethod
     def generate_prompt(
@@ -105,6 +151,34 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
         return system_prompt, user_prompt
 
     @classmethod
+    def _infer_audience(cls, analysis: AnalysisResult) -> str:
+        """Infer target audience from tech stack and features."""
+        tech_names = [t.name.lower() for t in analysis.tech_stack]
+        desc = (analysis.description or "").lower()
+
+        audiences = []
+
+        if any(t in tech_names for t in ["react", "vue", "angular", "next.js", "nextjs"]):
+            audiences.append("frontend developers")
+        if any(t in tech_names for t in ["fastapi", "django", "express", "nestjs", "flask"]):
+            audiences.append("backend developers")
+        if any(t in tech_names for t in ["docker", "kubernetes", "terraform", "aws", "azure"]):
+            audiences.append("DevOps engineers")
+        if any(t in tech_names for t in ["openai", "langchain", "claude", "llm", "gpt"]):
+            audiences.append("AI/ML engineers")
+        if any(t in tech_names for t in ["typescript", "rust", "go"]):
+            audiences.append("developers who value type safety/performance")
+        if "cli" in desc or "command" in desc or "terminal" in desc:
+            audiences.append("developers who prefer terminal workflows")
+        if "api" in desc:
+            audiences.append("developers building integrations")
+
+        if not audiences:
+            audiences.append("software developers")
+
+        return ", ".join(audiences[:3])
+
+    @classmethod
     def _build_user_prompt(
         cls,
         analysis: AnalysisResult,
@@ -126,10 +200,19 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
             [f"{t.name}" for t in analysis.tech_stack]
         ) if analysis.tech_stack else "Not specified"
 
-        # Format features
-        features_str = "\n".join(
-            [f"- {f.name}: {f.description}" for f in analysis.features]
-        ) if analysis.features else "Not specified"
+        # Generate value-oriented feature descriptions
+        features_with_value = []
+        for f in analysis.features[:5]:  # Limit to top 5
+            features_with_value.append(
+                f"- {f.name}: {f.description}\n"
+                f"  → Think: What problem does this solve? What can the user now do?"
+            )
+        features_value_str = (
+            "\n".join(features_with_value) if features_with_value else "Not specified"
+        )
+
+        # Infer target audience
+        audience_hints = cls._infer_audience(analysis)
 
         style_name = {
             PostStyle.PROBLEM_SOLUTION: "Problem-Solution",
@@ -152,13 +235,37 @@ IMPORTANT: Return ONLY the LinkedIn post content, no preamble or explanation.
 **Tech Stack**: {tech_stack_str}
 **GitHub Stats**: {analysis.stars} stars, {analysis.forks} forks
 
-**Key Features**:
-{features_str}
+---
 
-**README Summary**:
+**THE "SO WHAT?" FRAMEWORK** (Use this to find your hook):
+
+Likely Target Audience: {audience_hints}
+
+Think about:
+- What tedious task does this eliminate?
+- What risky process does this make safe?
+- What expensive thing does this make free?
+- What complex thing does this make simple?
+
+---
+
+**Features to Translate into Value**:
+{features_value_str}
+
+For each feature above, identify:
+1. A real-world scenario where someone would use this
+2. The outcome/benefit they get
+
+---
+
+**README Context**:
 {analysis.readme_summary or 'Not available'}
 
+---
+
 **Post Style**: {style_name}
+
+CRITICAL INSTRUCTION: Start by identifying the strongest frustration this project addresses. Use that as your opening hook. Do NOT start with "I built..." or "Introducing...".
 
 Generate an engaging LinkedIn post following the {style_name} format.
 Remember to write from the correct perspective based on the ownership context above.
