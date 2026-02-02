@@ -275,6 +275,16 @@ class GeminiClient:
 
     def _handle_error_response(self, response: httpx.Response) -> None:
         """Handle error responses from API."""
+        # Log the raw response for debugging
+        if response.status_code >= 400:
+            try:
+                error_body = response.json()
+                error_message = error_body.get("error", {}).get("message", "Unknown error")
+                error_status = error_body.get("error", {}).get("status", "")
+                print(f"[GEMINI API ERROR] Status: {response.status_code}, Message: {error_message}, Status: {error_status}")
+            except Exception:
+                print(f"[GEMINI API ERROR] Status: {response.status_code}, Body: {response.text[:500]}")
+
         if response.status_code == 429:
             retry_after = 60
             retry_header = response.headers.get("retry-after")
@@ -301,12 +311,34 @@ class GeminiClient:
             )
 
         if response.status_code == 400:
+            # Try to extract meaningful error from response
+            try:
+                error_body = response.json()
+                api_message = error_body.get("error", {}).get("message", "")
+                if api_message:
+                    raise GeminiAPIError(
+                        f"Bad request: {api_message}",
+                        status_code=400
+                    )
+            except (ValueError, KeyError):
+                pass
             raise GeminiAPIError(
                 "Invalid request. Please try again.",
                 status_code=400
             )
 
         if response.status_code >= 400:
+            # Try to extract meaningful error message from response
+            try:
+                error_body = response.json()
+                api_message = error_body.get("error", {}).get("message", "")
+                if api_message:
+                    raise GeminiAPIError(
+                        f"Gemini API error: {api_message}",
+                        status_code=response.status_code
+                    )
+            except (ValueError, KeyError):
+                pass
             raise GeminiAPIError(
                 "Failed to generate image. Please try again.",
                 status_code=response.status_code

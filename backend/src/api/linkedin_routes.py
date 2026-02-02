@@ -30,9 +30,10 @@ async def analyze_linkedin_content(
     request: LinkedInContentRequest,
     x_session_id: Optional[str] = Header(None, alias="X-Session-ID"),
 ) -> LinkedInAnalyzeResponse:
-    """Analyze pasted LinkedIn post content.
+    """Analyze pasted LinkedIn post content using AI.
 
     Extracts themes, tone, content type, key points, entities, and hashtags.
+    Uses AI analysis when an API key is available, falls back to keyword-based.
 
     Args:
         request: The LinkedIn content to analyze.
@@ -42,7 +43,23 @@ async def analyze_linkedin_content(
         LinkedInAnalyzeResponse with analysis results.
     """
     try:
-        analyzer = LinkedInAnalyzer()
+        session_id = x_session_id or "default"
+        ai_client = None
+
+        # Try to get an AI client (Claude first, then OpenAI)
+        claude_storage = get_key_storage()
+        openai_storage = get_openai_key_storage()
+
+        if claude_storage.exists(session_id):
+            api_key = claude_storage.retrieve(session_id)
+            if api_key:
+                ai_client = ClaudeClient(api_key=api_key)
+        elif openai_storage.exists(session_id):
+            api_key = openai_storage.retrieve(session_id)
+            if api_key:
+                ai_client = OpenAIClient(api_key=api_key)
+
+        analyzer = LinkedInAnalyzer(ai_client=ai_client)
         result = analyzer.analyze(request.content)
         return LinkedInAnalyzeResponse(success=True, data=result)
     except ValueError as e:

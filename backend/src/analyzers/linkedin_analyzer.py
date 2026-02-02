@@ -5,8 +5,32 @@ key points, entities, and hashtags for repurposing.
 """
 
 import re
-from typing import Optional
+import json
+from typing import Optional, Union
 from src.models.linkedin_models import ContentAnalysisResult
+
+
+# AI analysis prompt for structured content analysis
+AI_ANALYSIS_SYSTEM_PROMPT = """You are an expert LinkedIn content analyst.
+Analyze the provided LinkedIn post and extract structured information.
+
+Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
+{
+    "tone": "professional|casual|motivational|technical|humorous",
+    "content_type": "story|tips|announcement|opinion|case-study",
+    "themes": ["theme1", "theme2"],
+    "key_points": ["point1", "point2", "point3"],
+    "entities": ["entity1", "entity2"]
+}
+
+Guidelines:
+- tone: The overall voice/mood of the post
+- content_type: The primary format/structure of the content
+- themes: Main topics discussed (max 5, e.g., "leadership", "AI/ML", "career growth")
+- key_points: Core messages or takeaways (max 5, concise phrases)
+- entities: Technologies, companies, or notable people mentioned (max 10)
+
+Be precise and analytical. Return ONLY the JSON object."""
 
 
 class LinkedInAnalyzer:
@@ -84,15 +108,78 @@ class LinkedInAnalyzer:
         """
         self.ai_client = ai_client
 
-    def analyze(self, content: str) -> ContentAnalysisResult:
-        """Analyze LinkedIn post content.
+    def analyze_with_ai(self, content: str) -> Optional[ContentAnalysisResult]:
+        """Analyze content using AI for more accurate results.
 
         Args:
             content: The LinkedIn post text to analyze.
 
         Returns:
+            ContentAnalysisResult if AI analysis succeeds, None otherwise.
+        """
+        if not self.ai_client:
+            return None
+
+        try:
+            result = self.ai_client.generate_content(
+                system_prompt=AI_ANALYSIS_SYSTEM_PROMPT,
+                user_prompt=f"Analyze this LinkedIn post:\n\n{content}",
+                max_tokens=800,
+            )
+
+            if not result.success or not result.content:
+                return None
+
+            # Parse the JSON response
+            response_text = result.content.strip()
+            # Remove markdown code blocks if present
+            if response_text.startswith("```"):
+                response_text = re.sub(r'^```(?:json)?\n?', '', response_text)
+                response_text = re.sub(r'\n?```$', '', response_text)
+
+            ai_data = json.loads(response_text)
+
+            # Extract hashtags using pattern matching (AI doesn't need to do this)
+            hashtags = self._extract_hashtags(content)
+
+            cleaned = self._clean_content(content)
+
+            return ContentAnalysisResult(
+                original_content=content,
+                cleaned_content=cleaned,
+                themes=ai_data.get("themes", [])[:5],
+                tone=ai_data.get("tone", "professional"),
+                content_type=ai_data.get("content_type", "opinion"),
+                key_points=ai_data.get("key_points", [])[:5],
+                entities=ai_data.get("entities", [])[:10],
+                hashtags=hashtags,
+            )
+
+        except (json.JSONDecodeError, KeyError, TypeError):
+            # Fall back to keyword-based analysis if AI response is invalid
+            return None
+        except Exception:
+            return None
+
+    def analyze(self, content: str, use_ai: bool = True) -> ContentAnalysisResult:
+        """Analyze LinkedIn post content.
+
+        Uses AI analysis when available, falls back to keyword-based analysis.
+
+        Args:
+            content: The LinkedIn post text to analyze.
+            use_ai: Whether to attempt AI analysis first (default True).
+
+        Returns:
             ContentAnalysisResult with extracted information.
         """
+        # Try AI analysis first if enabled and client available
+        if use_ai and self.ai_client:
+            ai_result = self.analyze_with_ai(content)
+            if ai_result:
+                return ai_result
+
+        # Fall back to keyword-based analysis
         cleaned = self._clean_content(content)
 
         return ContentAnalysisResult(
