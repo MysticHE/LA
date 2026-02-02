@@ -40,7 +40,8 @@ interface RepurposeParams {
 export function useRepurposeContent() {
   const {
     linkedin,
-    selectedProvider,
+    claudeAuth,
+    openaiAuth,
     setRepurposedContent,
     setSuggestedHashtags,
     setImageContext,
@@ -54,6 +55,9 @@ export function useRepurposeContent() {
         throw new Error("No content analysis available. Please analyze content first.")
       }
 
+      // Determine provider: use param, or detect from connected providers
+      const provider = params.provider || (claudeAuth.isConnected ? "claude" : "openai")
+
       setIsRepurposing(true)
       setLinkedInError(null)
 
@@ -62,7 +66,7 @@ export function useRepurposeContent() {
         linkedin.contentAnalysis,
         params.targetStyle || linkedin.targetStyle,
         params.targetFormat || linkedin.targetFormat,
-        params.provider || selectedProvider || "claude"
+        provider
       )
 
       if (!response.success) {

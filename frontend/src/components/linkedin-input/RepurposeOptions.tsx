@@ -24,18 +24,21 @@ const FORMAT_OPTIONS: { value: RepurposeFormat; label: string; description: stri
 export function RepurposeOptions() {
   const {
     linkedin,
-    selectedProvider,
+    claudeAuth,
+    openaiAuth,
     setTargetStyle,
     setTargetFormat,
   } = useAppStore()
   const repurposeContent = useRepurposeContent()
 
   const handleRepurpose = () => {
-    repurposeContent.mutate({})
+    // Determine which provider to use (prefer Claude if both connected)
+    const provider = claudeAuth.isConnected ? "claude" : "openai"
+    repurposeContent.mutate({ provider })
   }
 
   const hasAnalysis = linkedin.contentAnalysis !== null
-  const hasProvider = selectedProvider !== null
+  const hasProvider = claudeAuth.isConnected || openaiAuth.isConnected
 
   return (
     <Card>
