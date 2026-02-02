@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A full-stack application that transforms GitHub projects into engaging LinkedIn posts with AI-powered content and image generation.
+A full-stack application that transforms GitHub projects into engaging LinkedIn posts with AI-powered content and image generation. Also includes a LinkedIn post repurposing feature for transforming existing posts with new styles and formats.
 
 ## Architecture
 
@@ -197,6 +197,51 @@ All prompts include: `**IMPORTANT: Do NOT use markdown formatting (no asterisks,
 
 **Editable Content**: Generated posts are editable in the UI before copying or image generation (`frontend/src/components/posts/GeneratedContentPreview.tsx`)
 
+### LinkedIn Post Repurposing
+
+**Files**:
+- `backend/src/models/linkedin_models.py` - Pydantic schemas for repurpose feature
+- `backend/src/analyzers/linkedin_analyzer.py` - Content analysis (tone, type, themes)
+- `backend/src/generators/repurpose_generator.py` - AI-powered content transformation
+- `backend/src/api/linkedin_routes.py` - API endpoints
+- `frontend/src/components/linkedin-input/` - UI components
+- `frontend/src/hooks/useLinkedInRepurpose.ts` - React Query hooks
+
+**Data Flow**:
+```
+User pastes LinkedIn post
+    → /api/linkedin/analyze (extract themes, tone, content type)
+    → User selects style + format
+    → /api/linkedin/repurpose (AI transformation)
+    → Repurposed content + suggested hashtags + image context
+```
+
+**Content Analysis**:
+- **Tone Detection**: professional, casual, motivational, technical, humorous
+- **Content Type**: story, tips, announcement, opinion, case-study
+- **Theme Extraction**: career growth, leadership, technology, startup, AI/ML, etc.
+- **Entity Extraction**: technologies, companies, people mentioned
+- **Hashtag Extraction**: from original post
+
+**Repurpose Options**:
+| Style | Description |
+|-------|-------------|
+| same | Keep original tone and voice |
+| professional | Formal, thought-leader tone |
+| casual | Friendly, conversational |
+| storytelling | Narrative-driven, engaging hook |
+
+| Format | Description |
+|--------|-------------|
+| expanded | Add depth and context (1500-2500 chars) |
+| condensed | Key points only (500-800 chars) |
+| thread | Numbered list structure |
+
+**UI Components**:
+- `LinkedInInputForm` - Paste input with character counter and analysis display
+- `RepurposeOptions` - Style and format selection with RadioGroup
+- `ContentPreview` - Side-by-side original vs repurposed with copy/edit
+
 ### AI Providers
 
 - **Claude** (`/api/claude/*`) - Anthropic Claude for post generation
@@ -299,6 +344,8 @@ All post generation prompts (`backend/prompts/*.md`) include instruction to not 
 | `/api/analyze` | POST | Analyze GitHub repo |
 | `/api/generate` | POST | Generate post prompt |
 | `/api/generate/image` | POST | Generate image |
+| `/api/linkedin/analyze` | POST | Analyze pasted LinkedIn content |
+| `/api/linkedin/repurpose` | POST | Repurpose content with AI |
 | `/api/auth/gemini/connect` | POST | Connect Gemini API key |
 | `/api/auth/gemini/status` | GET | Check connection status |
 

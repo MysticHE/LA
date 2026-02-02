@@ -1,8 +1,9 @@
 import { create } from "zustand"
-import type { AnalysisResult, GeneratedPrompt } from "@/lib/api"
+import type { AnalysisResult, GeneratedPrompt, ContentAnalysisResult, RepurposeStyle, RepurposeFormat, ImageContext } from "@/lib/api"
 
 type PostStyle = "problem-solution" | "tips-learnings" | "technical-showcase"
 type AIProvider = "claude" | "openai"
+type InputMode = "github" | "linkedin"
 
 // Claude Auth Slice
 interface ClaudeAuthState {
@@ -49,8 +50,40 @@ interface GeminiAuthActions {
   disconnectGemini: () => void
 }
 
+// LinkedIn Repurpose State
+interface LinkedInState {
+  originalContent: string
+  contentAnalysis: ContentAnalysisResult | null
+  repurposedContent: string | null
+  suggestedHashtags: string[]
+  imageContext: ImageContext | null
+  targetStyle: RepurposeStyle
+  targetFormat: RepurposeFormat
+  isAnalyzingLinkedIn: boolean
+  isRepurposing: boolean
+  linkedInError: string | null
+}
+
+interface LinkedInActions {
+  setOriginalContent: (content: string) => void
+  setContentAnalysis: (analysis: ContentAnalysisResult | null) => void
+  setRepurposedContent: (content: string | null) => void
+  setSuggestedHashtags: (hashtags: string[]) => void
+  setImageContext: (context: ImageContext | null) => void
+  setTargetStyle: (style: RepurposeStyle) => void
+  setTargetFormat: (format: RepurposeFormat) => void
+  setIsAnalyzingLinkedIn: (value: boolean) => void
+  setIsRepurposing: (value: boolean) => void
+  setLinkedInError: (error: string | null) => void
+  resetLinkedIn: () => void
+}
+
 // Main App State
 interface AppState {
+  // Input mode
+  inputMode: InputMode
+
+  // GitHub state
   repoUrl: string
   analysis: AnalysisResult | null
   selectedStyle: PostStyle
@@ -58,6 +91,9 @@ interface AppState {
   isAnalyzing: boolean
   isGenerating: boolean
   error: string | null
+
+  // LinkedIn state
+  linkedin: LinkedInState
 
   // Claude Auth
   claudeAuth: ClaudeAuthState
@@ -71,6 +107,10 @@ interface AppState {
   // Provider Selection
   selectedProvider: AIProvider | null
 
+  // Input mode action
+  setInputMode: (mode: InputMode) => void
+
+  // GitHub actions
   setRepoUrl: (url: string) => void
   setAnalysis: (result: AnalysisResult | null) => void
   setSelectedStyle: (style: PostStyle) => void
@@ -79,6 +119,19 @@ interface AppState {
   setIsGenerating: (value: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
+
+  // LinkedIn actions
+  setOriginalContent: LinkedInActions["setOriginalContent"]
+  setContentAnalysis: LinkedInActions["setContentAnalysis"]
+  setRepurposedContent: LinkedInActions["setRepurposedContent"]
+  setSuggestedHashtags: LinkedInActions["setSuggestedHashtags"]
+  setImageContext: LinkedInActions["setImageContext"]
+  setTargetStyle: LinkedInActions["setTargetStyle"]
+  setTargetFormat: LinkedInActions["setTargetFormat"]
+  setIsAnalyzingLinkedIn: LinkedInActions["setIsAnalyzingLinkedIn"]
+  setIsRepurposing: LinkedInActions["setIsRepurposing"]
+  setLinkedInError: LinkedInActions["setLinkedInError"]
+  resetLinkedIn: LinkedInActions["resetLinkedIn"]
 
   // Claude Auth Actions
   setClaudeConnected: ClaudeAuthActions["setClaudeConnected"]
@@ -123,7 +176,21 @@ const initialGeminiAuthState: GeminiAuthState = {
   error: null,
 }
 
+const initialLinkedInState: LinkedInState = {
+  originalContent: "",
+  contentAnalysis: null,
+  repurposedContent: null,
+  suggestedHashtags: [],
+  imageContext: null,
+  targetStyle: "same",
+  targetFormat: "expanded",
+  isAnalyzingLinkedIn: false,
+  isRepurposing: false,
+  linkedInError: null,
+}
+
 const initialState = {
+  inputMode: "github" as InputMode,
   repoUrl: "",
   analysis: null,
   selectedStyle: "problem-solution" as PostStyle,
@@ -135,6 +202,7 @@ const initialState = {
   isAnalyzing: false,
   isGenerating: false,
   error: null,
+  linkedin: initialLinkedInState,
   claudeAuth: initialClaudeAuthState,
   openaiAuth: initialOpenAIAuthState,
   geminiAuth: initialGeminiAuthState,
@@ -144,6 +212,10 @@ const initialState = {
 export const useAppStore = create<AppState>((set) => ({
   ...initialState,
 
+  // Input mode
+  setInputMode: (mode) => set({ inputMode: mode }),
+
+  // GitHub actions
   setRepoUrl: (url) => set({ repoUrl: url }),
   setAnalysis: (result) => set({ analysis: result }),
   setSelectedStyle: (style) => set({ selectedStyle: style }),
@@ -257,4 +329,48 @@ export const useAppStore = create<AppState>((set) => ({
 
   // Provider Selection Action
   setSelectedProvider: (provider) => set({ selectedProvider: provider }),
+
+  // LinkedIn Actions
+  setOriginalContent: (content) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, originalContent: content },
+    })),
+  setContentAnalysis: (analysis) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, contentAnalysis: analysis },
+    })),
+  setRepurposedContent: (content) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, repurposedContent: content },
+    })),
+  setSuggestedHashtags: (hashtags) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, suggestedHashtags: hashtags },
+    })),
+  setImageContext: (context) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, imageContext: context },
+    })),
+  setTargetStyle: (style) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, targetStyle: style },
+    })),
+  setTargetFormat: (format) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, targetFormat: format },
+    })),
+  setIsAnalyzingLinkedIn: (value) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, isAnalyzingLinkedIn: value },
+    })),
+  setIsRepurposing: (value) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, isRepurposing: value },
+    })),
+  setLinkedInError: (error) =>
+    set((state) => ({
+      linkedin: { ...state.linkedin, linkedInError: error },
+    })),
+  resetLinkedIn: () =>
+    set({ linkedin: initialLinkedInState }),
 }))

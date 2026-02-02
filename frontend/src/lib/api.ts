@@ -247,6 +247,44 @@ export interface StyleRecommendationResponse {
   tech_influenced: boolean
 }
 
+// LinkedIn Repurpose Types
+export interface ContentAnalysisResult {
+  original_content: string
+  cleaned_content: string
+  themes: string[]
+  tone: string
+  content_type: string
+  key_points: string[]
+  entities: string[]
+  hashtags: string[]
+}
+
+export interface LinkedInAnalyzeResponse {
+  success: boolean
+  data?: ContentAnalysisResult
+  error?: string
+}
+
+export type RepurposeStyle = "same" | "professional" | "casual" | "storytelling"
+export type RepurposeFormat = "expanded" | "condensed" | "thread"
+
+export interface ImageContext {
+  content_type: string
+  headline: string
+  subtitle: string | null
+  recommended_styles: string[]
+  themes: string[]
+}
+
+export interface RepurposeResponse {
+  success: boolean
+  repurposed_content?: string
+  suggested_hashtags?: string[]
+  image_context?: ImageContext
+  error?: string
+  retry_after?: number
+}
+
 export const api = {
   async analyzeRepo(url: string, token?: string): Promise<ApiResponse<AnalysisResult>> {
     const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -533,6 +571,90 @@ export const api = {
 
     if (!response.ok) {
       return { styles: [], content_type: null, tech_influenced: false }
+    }
+
+    return response.json()
+  },
+
+  // LinkedIn Repurpose API
+  async analyzeLinkedIn(content: string): Promise<LinkedInAnalyzeResponse> {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/linkedin/analyze`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-ID": getSessionId(),
+        },
+        body: JSON.stringify({ content }),
+      },
+      30000
+    )
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: getUserFriendlyError(data.detail || data.error || "Analysis failed"),
+      }
+    }
+
+    return response.json()
+  },
+
+  async repurposeContent(
+    originalContent: string,
+    analysis: ContentAnalysisResult,
+    targetStyle: RepurposeStyle = "same",
+    targetFormat: RepurposeFormat = "expanded",
+    provider: AIProvider = "claude"
+  ): Promise<RepurposeResponse> {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/linkedin/repurpose?provider=${provider}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-ID": getSessionId(),
+        },
+        body: JSON.stringify({
+          original_content: originalContent,
+          analysis,
+          target_style: targetStyle,
+          target_format: targetFormat,
+        }),
+      },
+      60000 // 60 second timeout for AI generation
+    )
+
+    // Handle rate limit
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("Retry-After")
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: getUserFriendlyError(data.detail || "Rate limit exceeded", "RATE_LIMITED"),
+        retry_after: retryAfter ? parseInt(retryAfter, 10) : 60,
+      }
+    }
+
+    // Handle unauthorized
+    if (response.status === 401) {
+      const data = await response.json().catch(() => ({}))
+      const providerName = provider === "openai" ? "OpenAI" : "Claude"
+      return {
+        success: false,
+        error: data.detail || `Not connected to ${providerName}. Please connect your API key.`,
+      }
+    }
+
+    // Handle other errors
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: getUserFriendlyError(data.detail || data.error || "Repurpose failed"),
+      }
     }
 
     return response.json()
