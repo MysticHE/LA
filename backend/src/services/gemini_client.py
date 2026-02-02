@@ -87,8 +87,8 @@ class GeminiClient:
     # Default model for image generation (Nano Banana Pro)
     DEFAULT_MODEL = "gemini-3-pro-image-preview"
 
-    # Default timeout in seconds
-    DEFAULT_TIMEOUT = 60.0
+    # Default timeout in seconds (increased for Nano Banana Pro high-quality generation)
+    DEFAULT_TIMEOUT = 120.0
 
     def __init__(self, api_key: str, timeout: Optional[float] = None):
         """Initialize the Gemini client.
