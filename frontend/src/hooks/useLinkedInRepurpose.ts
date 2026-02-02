@@ -40,8 +40,6 @@ interface RepurposeParams {
 export function useRepurposeContent() {
   const {
     linkedin,
-    claudeAuth,
-    openaiAuth,
     setRepurposedContent,
     setSuggestedHashtags,
     setImageContext,
@@ -55,8 +53,8 @@ export function useRepurposeContent() {
         throw new Error("No content analysis available. Please analyze content first.")
       }
 
-      // Determine provider: use param, or detect from connected providers
-      const provider = params.provider || (claudeAuth.isConnected ? "claude" : "openai")
+      // Provider is passed from component which detects connected provider
+      const provider = params.provider || "claude"
 
       setIsRepurposing(true)
       setLinkedInError(null)
