@@ -1,15 +1,17 @@
 import { useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Copy, Check, Image, Hash, ArrowRight } from "lucide-react"
+import { Copy, Check, Image, Hash, ArrowRight, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { useAppStore } from "@/store/appStore"
+import { ImageGenerationPanel } from "@/components/posts/ImageGenerationPanel"
 
 export function ContentPreview() {
   const { linkedin, setRepurposedContent } = useAppStore()
   const [copied, setCopied] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
+  const [showImageGenerator, setShowImageGenerator] = useState(false)
 
   if (!linkedin.repurposedContent) {
     return null
@@ -150,17 +152,39 @@ export function ContentPreview() {
             </div>
           )}
 
-          {linkedin.imageContext && (
-            <div className="pt-4 border-t">
-              <Button variant="outline" className="w-full gap-2">
-                <Image className="h-4 w-4" />
-                Generate Image for This Post
-              </Button>
+          <div className="pt-4 border-t">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => setShowImageGenerator(!showImageGenerator)}
+            >
+              <Image className="h-4 w-4" />
+              Generate Image for This Post
+              {showImageGenerator ? (
+                <ChevronUp className="h-4 w-4 ml-auto" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              )}
+            </Button>
+            {linkedin.imageContext && !showImageGenerator && (
               <p className="text-xs text-muted-foreground text-center mt-2">
                 Recommended styles: {linkedin.imageContext.recommended_styles.slice(0, 3).join(", ")}
               </p>
-            </div>
-          )}
+            )}
+          </div>
+
+          <AnimatePresence>
+            {showImageGenerator && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ImageGenerationPanel postContent={linkedin.repurposedContent || ""} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
     </motion.div>
