@@ -27,8 +27,9 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
             <section>
               <h3 className="font-medium mb-2">What We Collect</h3>
               <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
-                <li>API keys you provide (encrypted, session-only)</li>
-                <li>GitHub repository URLs you analyze</li>
+                <li>API keys you provide (AES-256 encrypted, session-bound)</li>
+                <li>Session ID stored in your browser (localStorage)</li>
+                <li>GitHub repository URLs you analyze (not stored)</li>
               </ul>
             </section>
 
@@ -43,10 +44,16 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
 
             <section>
               <h3 className="font-medium mb-2">How Your Data Is Used</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Your API keys are used to communicate with AI providers (OpenAI, Anthropic, Google)
-                to generate content. Keys are encrypted during your session and cleared when you disconnect.
+              <p className="text-muted-foreground text-xs leading-relaxed mb-2">
+                Your API keys are used solely to communicate with AI providers (OpenAI, Anthropic, Google)
+                to generate content on your behalf.
               </p>
+              <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
+                <li>Keys are encrypted with AES-256 and bound to your session</li>
+                <li>Keys auto-expire after 24 hours of inactivity</li>
+                <li>Keys are permanently deleted when you click "Disconnect"</li>
+                <li>We never log, share, or access your plaintext API keys</li>
+              </ul>
             </section>
 
             <section>

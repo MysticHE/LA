@@ -43,10 +43,19 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
             </section>
 
             <section>
-              <h3 className="font-medium mb-2">API Keys</h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Your API keys are encrypted and used only during your active session.
-                You are responsible for any costs from your AI provider. Keys are cleared when you disconnect.
+              <h3 className="font-medium mb-2">API Keys & Security</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed mb-2">
+                Your API keys are protected with AES-256 encryption and bound to your browser session.
+                We never store your keys in plaintext or in any database.
+              </p>
+              <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
+                <li>Keys are encrypted immediately upon entry</li>
+                <li>Keys auto-expire after 24 hours of inactivity</li>
+                <li>Keys are permanently deleted when you disconnect</li>
+                <li>You are responsible for any costs from your AI provider</li>
+              </ul>
+              <p className="text-muted-foreground text-xs leading-relaxed mt-2">
+                <strong>Tip:</strong> For added security, consider creating API keys with usage limits in your provider's dashboard.
               </p>
             </section>
 
