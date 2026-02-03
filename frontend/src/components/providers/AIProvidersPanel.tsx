@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -111,6 +111,43 @@ export function AIProvidersPanel() {
     resolver: zodResolver(geminiSchema),
     defaultValues: { apiKey: "" },
   })
+
+  // Check API connection status on mount (restore state after page refresh)
+  useEffect(() => {
+    const checkAllStatus = async () => {
+      // Check Claude status
+      try {
+        const claudeStatus = await api.getClaudeStatus()
+        if (claudeStatus.connected) {
+          setClaudeConnected(true, claudeStatus.masked_key)
+        }
+      } catch {
+        // Silently fail - user not connected
+      }
+
+      // Check OpenAI status
+      try {
+        const openaiStatus = await api.getOpenAIStatus()
+        if (openaiStatus.connected) {
+          setOpenAIConnected(true, openaiStatus.masked_key)
+        }
+      } catch {
+        // Silently fail - user not connected
+      }
+
+      // Check Gemini status
+      try {
+        const geminiStatus = await api.getGeminiStatus()
+        if (geminiStatus.connected) {
+          setGeminiConnected(true, geminiStatus.masked_key)
+        }
+      } catch {
+        // Silently fail - user not connected
+      }
+    }
+
+    checkAllStatus()
+  }, [setClaudeConnected, setOpenAIConnected, setGeminiConnected])
 
   const handleClaudeSubmit = async (data: ClaudeFormData) => {
     if (!consent) return
