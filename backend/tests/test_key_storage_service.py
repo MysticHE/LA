@@ -1,4 +1,4 @@
-"""Tests for the key storage service."""
+"""Tests for the hardened key storage service."""
 
 import pytest
 from datetime import datetime, timezone
@@ -22,8 +22,8 @@ class TestKeyStorageService:
         assert result is True
         assert retrieved == api_key
 
-    def test_store_encrypts_key(self):
-        """Test that the key is encrypted when stored."""
+    def test_store_encrypts_key_with_session_binding(self):
+        """Test that the key is encrypted with session binding when stored."""
         encryption_service = EncryptionService()
         storage_service = KeyStorageService(encryption_service=encryption_service)
 
@@ -37,8 +37,26 @@ class TestKeyStorageService:
 
         # The stored key should not be the plaintext
         assert stored.encrypted_key != api_key
-        # But it should decrypt to the original
-        assert encryption_service.decrypt(stored.encrypted_key) == api_key
+        # But it should decrypt to the original with correct session
+        assert encryption_service.decrypt(stored.encrypted_key, session_id) == api_key
+
+    def test_session_bound_encryption_prevents_cross_session_access(self):
+        """Test that encrypted keys cannot be decrypted with wrong session."""
+        encryption_service = EncryptionService()
+        storage_service = KeyStorageService(encryption_service=encryption_service)
+
+        session_id = "session-123"
+        wrong_session = "session-456"
+        api_key = "sk-ant-api03-test-key"
+
+        storage_service.store(session_id, api_key)
+
+        # Access internal storage
+        stored = storage_service._storage[session_id]
+
+        # Should fail to decrypt with wrong session
+        with pytest.raises(ValueError):
+            encryption_service.decrypt(stored.encrypted_key, wrong_session)
 
     def test_retrieve_nonexistent_returns_none(self):
         """Test that retrieving a nonexistent key returns None."""
@@ -225,19 +243,87 @@ class TestKeyStorageService:
 
         assert updated_access > initial_access
 
+    def test_retrieve_increments_access_count(self):
+        """Test that retrieving a key increments the access count."""
+        service = KeyStorageService()
+        session_id = "session-123"
+        service.store(session_id, "api-key")
+
+        assert service._storage[session_id].access_count == 0
+
+        service.retrieve(session_id)
+        assert service._storage[session_id].access_count == 1
+
+        service.retrieve(session_id)
+        assert service._storage[session_id].access_count == 2
+
+    def test_get_key_metadata(self):
+        """Test that key metadata can be retrieved."""
+        service = KeyStorageService()
+        session_id = "session-123"
+        service.store(session_id, "api-key")
+        service.retrieve(session_id)  # Increment access count
+
+        metadata = service.get_key_metadata(session_id)
+
+        assert metadata is not None
+        assert "created_at" in metadata
+        assert "last_accessed" in metadata
+        assert "access_count" in metadata
+        assert metadata["access_count"] == 1
+
+    def test_get_key_metadata_nonexistent(self):
+        """Test that metadata for nonexistent session returns None."""
+        service = KeyStorageService()
+
+        metadata = service.get_key_metadata("nonexistent")
+
+        assert metadata is None
+
+    def test_get_storage_stats(self):
+        """Test that storage stats can be retrieved."""
+        service = KeyStorageService()
+        service.store("session-1", "key-1")
+        service.store("session-2", "key-2")
+
+        stats = service.get_storage_stats()
+
+        assert stats["total_keys"] == 2
+        assert "oldest_key" in stats
+        assert "newest_key" in stats
+
+    def test_get_storage_stats_empty(self):
+        """Test that storage stats for empty storage."""
+        service = KeyStorageService()
+
+        stats = service.get_storage_stats()
+
+        assert stats["total_keys"] == 0
+
+    def test_stored_key_has_session_id(self):
+        """Test that stored key records the session ID for verification."""
+        service = KeyStorageService()
+        session_id = "session-123"
+        service.store(session_id, "api-key")
+
+        stored = service._storage[session_id]
+        assert stored.session_id == session_id
+
     def test_shared_encryption_service(self):
         """Test that a shared encryption service can be used."""
         encryption_service = EncryptionService()
         storage1 = KeyStorageService(encryption_service=encryption_service)
         storage2 = KeyStorageService(encryption_service=encryption_service)
 
+        session_id = "session-123"
+
         # Store with one service
-        storage1.store("session-123", "api-key")
+        storage1.store(session_id, "api-key")
 
         # Can't retrieve from another storage instance (different in-memory storage)
-        assert storage2.retrieve("session-123") is None
+        assert storage2.retrieve(session_id) is None
 
-        # But if we manually copy the encrypted data, it can be decrypted
-        encrypted = storage1._storage["session-123"].encrypted_key
-        decrypted = encryption_service.decrypt(encrypted)
+        # But if we manually copy the encrypted data, it can be decrypted with correct session
+        encrypted = storage1._storage[session_id].encrypted_key
+        decrypted = encryption_service.decrypt(encrypted, session_id)
         assert decrypted == "api-key"

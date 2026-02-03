@@ -2,9 +2,10 @@
 
 This test suite verifies:
 1. Gemini API keys are encrypted using AES-256 via encryption_service.py
-2. API keys are masked in logs (****xxxx format)
-3. API responses show only last 4 characters
-4. Security scan passes with 0 critical findings for credential exposure
+2. Session-bound encryption prevents cross-session access
+3. API keys are masked in logs (****xxxx format)
+4. API responses show only last 4 characters
+5. Security scan passes with 0 critical findings for credential exposure
 """
 
 import pytest
@@ -48,8 +49,8 @@ class TestGeminiKeyEncryption:
         # The stored key should not be plaintext
         assert stored.encrypted_key != SAMPLE_GEMINI_KEY
 
-        # But it should decrypt to the original
-        decrypted = encryption_service.decrypt(stored.encrypted_key)
+        # But it should decrypt to the original with correct session
+        decrypted = encryption_service.decrypt(stored.encrypted_key, session_id)
         assert decrypted == SAMPLE_GEMINI_KEY
 
     def test_gemini_key_uses_aes_256(self):
@@ -58,18 +59,19 @@ class TestGeminiKeyEncryption:
         assert EncryptionService.KEY_SIZE == 32
 
     def test_gemini_key_encrypted_differently_each_time(self):
-        """Test that same key produces different ciphertext (random nonce)."""
+        """Test that same key produces different ciphertext (random nonce/salt)."""
         encryption_service = EncryptionService()
+        session_id = "test-session-001"
 
-        encrypted1 = encryption_service.encrypt(SAMPLE_GEMINI_KEY)
-        encrypted2 = encryption_service.encrypt(SAMPLE_GEMINI_KEY)
+        encrypted1 = encryption_service.encrypt(SAMPLE_GEMINI_KEY, session_id)
+        encrypted2 = encryption_service.encrypt(SAMPLE_GEMINI_KEY, session_id)
 
-        # Different ciphertext due to random nonce
+        # Different ciphertext due to random nonce/salt
         assert encrypted1 != encrypted2
 
         # But both decrypt to same value
-        assert encryption_service.decrypt(encrypted1) == SAMPLE_GEMINI_KEY
-        assert encryption_service.decrypt(encrypted2) == SAMPLE_GEMINI_KEY
+        assert encryption_service.decrypt(encrypted1, session_id) == SAMPLE_GEMINI_KEY
+        assert encryption_service.decrypt(encrypted2, session_id) == SAMPLE_GEMINI_KEY
 
     def test_gemini_key_decryption_requires_same_key(self):
         """Test that different encryption keys cannot decrypt each other's data."""
@@ -77,25 +79,42 @@ class TestGeminiKeyEncryption:
         key2 = EncryptionService.generate_key()
         service1 = EncryptionService(key=key1)
         service2 = EncryptionService(key=key2)
+        session_id = "test-session-001"
 
-        encrypted = service1.encrypt(SAMPLE_GEMINI_KEY)
+        encrypted = service1.encrypt(SAMPLE_GEMINI_KEY, session_id)
 
-        with pytest.raises(ValueError, match="Decryption failed"):
-            service2.decrypt(encrypted)
+        with pytest.raises(ValueError):
+            service2.decrypt(encrypted, session_id)
+
+    def test_gemini_key_session_binding(self):
+        """Test that encrypted data cannot be decrypted with wrong session."""
+        encryption_service = EncryptionService()
+        session1 = "session-123"
+        session2 = "session-456"
+
+        encrypted = encryption_service.encrypt(SAMPLE_GEMINI_KEY, session1)
+
+        # Should decrypt with correct session
+        assert encryption_service.decrypt(encrypted, session1) == SAMPLE_GEMINI_KEY
+
+        # Should fail with different session
+        with pytest.raises(ValueError):
+            encryption_service.decrypt(encrypted, session2)
 
     def test_gemini_key_tamper_detection(self):
-        """Test that GCM mode detects tampering with encrypted data."""
+        """Test that HMAC verification detects tampering with encrypted data."""
         import base64
 
         encryption_service = EncryptionService()
-        encrypted = encryption_service.encrypt(SAMPLE_GEMINI_KEY)
+        session_id = "test-session-001"
+        encrypted = encryption_service.encrypt(SAMPLE_GEMINI_KEY, session_id)
 
         # Tamper with the encrypted data
         decoded = base64.b64decode(encrypted)
         tampered = base64.b64encode(decoded[:-1] + b'X').decode('utf-8')
 
-        with pytest.raises(ValueError, match="Decryption failed"):
-            encryption_service.decrypt(tampered)
+        with pytest.raises(ValueError):
+            encryption_service.decrypt(tampered, session_id)
 
 
 class TestAPIKeyMaskingInLogs:
@@ -315,9 +334,10 @@ class TestSecurityScanRequirements:
         """Verify encryption service doesn't use hardcoded keys."""
         service1 = EncryptionService()
         service2 = EncryptionService()
+        session_id = "test-session-001"
 
         # Each instance generates its own key if not provided
-        encrypted1 = service1.encrypt("test")
+        encrypted1 = service1.encrypt("test", session_id)
 
         # Different instances should have different keys (unless from env)
         # So decrypting with a different instance should fail
@@ -326,7 +346,7 @@ class TestSecurityScanRequirements:
         if not os.environ.get("ENCRYPTION_KEY"):
             # Without env key, each instance has different key
             with pytest.raises(ValueError):
-                service2.decrypt(encrypted1)
+                service2.decrypt(encrypted1, session_id)
 
     def test_sensitive_field_names_redacted(self):
         """Verify common sensitive field names are auto-redacted."""
@@ -347,6 +367,11 @@ class TestSecurityScanRequirements:
                 assert redacted[field] == "[REDACTED]"
 
         assert redacted["normal_field"] == "not redacted"
+
+    def test_pbkdf2_iterations_security(self):
+        """Verify PBKDF2 uses sufficient iterations against brute force."""
+        # OWASP recommends at least 100,000 iterations for PBKDF2-SHA256
+        assert EncryptionService.PBKDF2_ITERATIONS >= 100000
 
 
 class TestKeyLifecycle:
@@ -398,3 +423,25 @@ class TestKeyLifecycle:
         storage.delete("session-gemini")
         assert storage.retrieve("session-gemini") is None
         assert storage.retrieve("session-openai") == SAMPLE_OPENAI_KEY
+
+    def test_session_bound_encryption_isolation(self):
+        """Test that encrypted keys are bound to their session."""
+        encryption_service = EncryptionService()
+        storage = KeyStorageService(encryption_service=encryption_service)
+
+        session1 = "session-001"
+        session2 = "session-002"
+
+        # Store key in session1
+        storage.store(session1, SAMPLE_GEMINI_KEY)
+
+        # Get the encrypted key
+        encrypted = storage._storage[session1].encrypted_key
+
+        # Should not be able to decrypt with wrong session
+        with pytest.raises(ValueError):
+            encryption_service.decrypt(encrypted, session2)
+
+        # Should work with correct session
+        decrypted = encryption_service.decrypt(encrypted, session1)
+        assert decrypted == SAMPLE_GEMINI_KEY

@@ -87,8 +87,16 @@ async def get_gemini_status(
 
     Returns:
         GeminiAuthResponse with connection status and masked key if connected.
+
+    Raises:
+        HTTPException: 400 if X-Session-ID header is missing.
     """
-    session_id = x_session_id or "default"
+    if not x_session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-ID header is required"
+        )
+    session_id = x_session_id
     storage = get_gemini_key_storage()
 
     if storage.exists(session_id):
@@ -120,9 +128,16 @@ async def connect_gemini(
 
     Returns:
         GeminiAuthResponse with connection status.
+
+    Raises:
+        HTTPException: 400 if X-Session-ID header is missing.
     """
-    # Use session ID from header or generate a default one
-    session_id = x_session_id or "default"
+    if not x_session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-ID header is required"
+        )
+    session_id = x_session_id
     audit = get_audit_logger()
 
     # Validate the API key
@@ -178,8 +193,14 @@ async def disconnect_gemini(
 
     Raises:
         HTTPException: 400 if no key is stored for the session.
+        HTTPException: 400 if X-Session-ID header is missing.
     """
-    session_id = x_session_id or "default"
+    if not x_session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-ID header is required"
+        )
+    session_id = x_session_id
     storage = get_gemini_key_storage()
     audit = get_audit_logger()
 
